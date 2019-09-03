@@ -30,6 +30,54 @@ namespace Uuid.Tests
 
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
         // ReSharper disable once MemberCanBePrivate.Global
+        public static object[] CorrectCompareToArraysAndResult { get; } =
+        {
+            new object[]
+            {
+                new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+                0
+            },
+            new object[]
+            {
+                new byte[] {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                new byte[] {255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255, 255},
+                0
+            },
+            new object[]
+            {
+                new byte[] {1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, // uuidBytes       1-1
+                new byte[] {1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, // compareToBytes  1-1
+                0
+            },
+            new object[]
+            {
+                new byte[] {2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, // uuidBytes       2-1
+                new byte[] {1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, // compareToBytes  1-1
+                0
+            },
+            new object[]
+            {
+                new byte[] {1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0}, // uuidBytes       1-2
+                new byte[] {1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, // compareToBytes  1-1
+                0
+            },
+            new object[]
+            {
+                new byte[] {1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, // uuidBytes       1-1
+                new byte[] {2, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, // compareToBytes  2-1
+                0
+            },
+            new object[]
+            {
+                new byte[] {1, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0}, // uuidBytes       1-1
+                new byte[] {1, 0, 0, 0, 0, 0, 0, 2, 0, 0, 0, 0, 0, 0, 0, 0}, // compareToBytes  1-2
+                0
+            },
+        };
+
+        // ReSharper disable once UnusedAutoPropertyAccessor.Global
+        // ReSharper disable once MemberCanBePrivate.Global
         public static object[] IncorrectUuidBytesArraysAndExceptionTypes { get; } =
         {
             new object[]
@@ -43,6 +91,40 @@ namespace Uuid.Tests
                 typeof(ArgumentException)
             }
         };
+
+        [Test]
+        public unsafe void Test()
+        {
+            var ulongs1 = stackalloc ulong[2];
+            ulongs1[0] = 1;
+            ulongs1[1] = 1;
+            var uuid1 = new Uuid((byte*) ulongs1);
+            var uuid1Array = new byte[16];
+            fixed (byte* pinnedUuidArray = uuid1Array)
+            {
+                *(Uuid*) pinnedUuidArray = uuid1;
+            }
+
+            var ulongs2 = stackalloc ulong[2];
+            ulongs2[0] = 2;
+            ulongs2[1] = 1;
+            var uuid2 = new Uuid((byte*) ulongs2);
+            var uuid2Array = new byte[16];
+            fixed (byte* pinnedUuidArray = uuid2Array)
+            {
+                *(Uuid*) pinnedUuidArray = uuid2;
+            }
+
+            var ulongs3 = stackalloc ulong[2];
+            ulongs3[0] = 1;
+            ulongs3[1] = 2;
+            var uuid3 = new Uuid((byte*) ulongs3);
+            var uuid3Array = new byte[16];
+            fixed (byte* pinnedUuidArray = uuid3Array)
+            {
+                *(Uuid*) pinnedUuidArray = uuid3;
+            }
+        }
 
         public static byte[] StringToByteArray(String hex)
         {
@@ -203,6 +285,26 @@ namespace Uuid.Tests
             });
         }
 
+        [TestCaseSource(nameof(CorrectCompareToArraysAndResult))]
+        public void CompareTo_Object_SameAsGuid(byte[] bytes, byte[] compareToBytes, int result)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.AreEqual(16, bytes.Length);
+                Assert.AreEqual(16, compareToBytes.Length);
+
+                var uuid = new Uuid(bytes);
+                var compareToUuid = new Uuid(compareToBytes);
+                var guid = new Guid(bytes);
+                var compareToGuid = new Guid(compareToBytes);
+
+                var uuidCompareToResult = uuid.CompareTo(compareToUuid);
+                var guidCompareToResult = guid.CompareTo(compareToGuid);
+
+                Assert.AreEqual(guidCompareToResult, uuidCompareToResult);
+            });
+        }
+
         [TestCaseSource(nameof(CorrectUuidBytesArrays))]
         public void CompareTo_Object_Null_SameAsGuid(byte[] bytes)
         {
@@ -215,6 +317,22 @@ namespace Uuid.Tests
 
                 Assert.AreEqual(1, guid.CompareTo(null));
                 Assert.AreEqual(1, uuid.CompareTo(null));
+            });
+        }
+
+        [TestCaseSource(nameof(CorrectUuidBytesArrays))]
+        [SuppressMessage("ReSharper", "ReturnValueOfPureMethodIsNotUsed")]
+        public void CompareTo_Object_AnotherType_SameAsGuid(byte[] bytes)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.AreEqual(16, bytes.Length);
+
+                var uuid = new Uuid(bytes);
+                var guid = new Guid(bytes);
+
+                Assert.Throws<ArgumentException>(() => guid.CompareTo(42));
+                Assert.Throws<ArgumentException>(() => uuid.CompareTo(42));
             });
         }
     }
