@@ -1,25 +1,21 @@
 using System;
 using System.Collections;
+using System.Diagnostics.CodeAnalysis;
+using System.Reflection;
 using System.Text;
 using NUnit.Framework;
 
 namespace Uuid.Tests
 {
+    [SuppressMessage("ReSharper", "HeapView.ClosureAllocation")]
+    [SuppressMessage("ReSharper", "HeapView.DelegateAllocation")]
+    [SuppressMessage("ReSharper", "HeapView.ObjectAllocation.Evident")]
+    [SuppressMessage("ReSharper", "HeapView.BoxingAllocation")]
     public class UuidLikeGuidBehavior
     {
-        private byte[] _uuidBytes;
-
-        [OneTimeSetUp]
-        public void Setup()
-        {
-            //0a141e28-323c-4650-5a64-6e78828c96a0
-            _uuidBytes = new byte[]
-            {
-                10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160
-            };
-        }
-
-        public static object[] UuidBytesArrays { get; } =
+        // ReSharper disable once UnusedAutoPropertyAccessor.Global
+        // ReSharper disable once MemberCanBePrivate.Global
+        public static object[] CorrectUuidBytesArrays { get; } =
         {
             new object[] {new byte[] {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160}},
             new object[] {new byte[] {163, 167, 252, 114, 206, 122, 17, 233, 128, 237, 0, 13, 58, 17, 37, 233}},
@@ -32,6 +28,22 @@ namespace Uuid.Tests
             new object[] {new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255}},
         };
 
+        // ReSharper disable once UnusedAutoPropertyAccessor.Global
+        // ReSharper disable once MemberCanBePrivate.Global
+        public static object[] IncorrectUuidBytesArraysAndExceptionTypes { get; } =
+        {
+            new object[]
+            {
+                new byte[] {10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150}, // 15 bytes
+                typeof(ArgumentException)
+            },
+            new object[]
+            {
+                new byte[] {163, 167, 252, 114, 206, 122, 17, 233, 128, 237, 0, 13, 58, 17, 37, 233, 255}, // 17 bytes
+                typeof(ArgumentException)
+            }
+        };
+
         public static byte[] StringToByteArray(String hex)
         {
             int NumberChars = hex.Length;
@@ -41,11 +53,11 @@ namespace Uuid.Tests
             return bytes;
         }
 
-        [Test]
-        public unsafe void Ctor_From_ByteArray_SameAsGuid()
+        [TestCaseSource(nameof(CorrectUuidBytesArrays))]
+        public unsafe void Ctor_From_ByteArray_SameAsGuid(byte[] bytes)
         {
-            var uuid = new Uuid(_uuidBytes);
-            var guid = new Guid(_uuidBytes);
+            var uuid = new Uuid(bytes);
+            var guid = new Guid(bytes);
 
             var uuidArray = new byte[16];
             fixed (byte* pinnedUuidArray = uuidArray)
@@ -62,10 +74,41 @@ namespace Uuid.Tests
             Assert.AreEqual(guidArray, uuidArray);
         }
 
-        [Test]
-        public unsafe void Ctor_From_ReadOnlySpan_SameAsGuid()
+        [TestCaseSource(nameof(IncorrectUuidBytesArraysAndExceptionTypes))]
+        public void Ctor_From_ByteArray_Incorrect_SameAsGuid(byte[] bytes, Type exceptionType)
         {
-            var readOnlySpan = new ReadOnlySpan<byte>(_uuidBytes);
+            Assert.Multiple(() =>
+            {
+                Assert.IsTrue(typeof(Exception).IsAssignableFrom(exceptionType));
+                Assert.Throws(exceptionType, () => new Guid(bytes));
+                Assert.Throws(exceptionType, () => new Uuid(bytes));
+            });
+        }
+
+        [Test]
+        [SuppressMessage("ReSharper", "AssignNullToNotNullAttribute")]
+        [SuppressMessage("ReSharper", "ExpressionIsAlwaysNull")]
+        public void Ctor_From_ByteArray_Null_SameAsGuid()
+        {
+            byte[] bytes = null;
+
+            Assert.Multiple(() =>
+            {
+                Assert.Throws<ArgumentNullException>(() =>
+                {
+                    var _ = new Guid(bytes);
+                });
+                Assert.Throws<ArgumentNullException>(() =>
+                {
+                    var _ = new Uuid(bytes);
+                });
+            });
+        }
+
+        [TestCaseSource(nameof(CorrectUuidBytesArrays))]
+        public unsafe void Ctor_From_ReadOnlySpan_SameAsGuid(byte[] bytes)
+        {
+            var readOnlySpan = new ReadOnlySpan<byte>(bytes);
 
             var uuid = new Uuid(readOnlySpan);
             var guid = new Guid(readOnlySpan);
@@ -85,11 +128,30 @@ namespace Uuid.Tests
             Assert.AreEqual(guidArray, uuidArray);
         }
 
-        [Test]
-        public void ToByteArray_SameAsGuid()
+        [TestCaseSource(nameof(IncorrectUuidBytesArraysAndExceptionTypes))]
+        public unsafe void Ctor_From_ReadOnlySpan_Incorrect_SameAsGuid(byte[] bytes, Type exceptionType)
         {
-            var uuid = new Uuid(_uuidBytes);
-            var guid = new Guid(_uuidBytes);
+            Assert.Multiple(() =>
+            {
+                Assert.IsTrue(typeof(Exception).IsAssignableFrom(exceptionType));
+                Assert.Throws(exceptionType, () =>
+                {
+                    var readOnlySpan = new ReadOnlySpan<byte>(bytes);
+                    var _ = new Guid(readOnlySpan);
+                });
+                Assert.Throws(exceptionType, () =>
+                {
+                    var readOnlySpan = new ReadOnlySpan<byte>(bytes);
+                    var _ = new Uuid(readOnlySpan);
+                });
+            });
+        }
+
+        [TestCaseSource(nameof(CorrectUuidBytesArrays))]
+        public void ToByteArray_SameAsGuid(byte[] bytes)
+        {
+            var uuid = new Uuid(bytes);
+            var guid = new Guid(bytes);
 
             var uuidArray = uuid.ToByteArray();
             var guidArray = guid.ToByteArray();
@@ -97,11 +159,11 @@ namespace Uuid.Tests
             Assert.AreEqual(guidArray, uuidArray);
         }
 
-        [Test]
-        public void TryWriteBytes_SameAsGuid()
+        [TestCaseSource(nameof(CorrectUuidBytesArrays))]
+        public void TryWriteBytes_SameAsGuid(byte[] bytes)
         {
-            var uuid = new Uuid(_uuidBytes);
-            var guid = new Guid(_uuidBytes);
+            var uuid = new Uuid(bytes);
+            var guid = new Guid(bytes);
 
             var uuidArray = new byte[16];
             var uuidSpan = new Span<byte>(uuidArray);
@@ -119,11 +181,11 @@ namespace Uuid.Tests
             });
         }
 
-        [Test]
-        public void TryWriteBytes_IncorrectSpan_SameAsGuid()
+        [TestCaseSource(nameof(CorrectUuidBytesArrays))]
+        public void TryWriteBytes_IncorrectSpan_SameAsGuid(byte[] bytes)
         {
-            var uuid = new Uuid(_uuidBytes);
-            var guid = new Guid(_uuidBytes);
+            var uuid = new Uuid(bytes);
+            var guid = new Guid(bytes);
 
             var uuidArray = new byte[15];
             var uuidSpan = new Span<byte>(uuidArray);
@@ -141,7 +203,7 @@ namespace Uuid.Tests
             });
         }
 
-        [TestCaseSource(nameof(UuidBytesArrays))]
+        [TestCaseSource(nameof(CorrectUuidBytesArrays))]
         public void CompareTo_Object_Null_SameAsGuid(byte[] bytes)
         {
             Assert.Multiple(() =>
