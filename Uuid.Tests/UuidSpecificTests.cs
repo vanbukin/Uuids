@@ -1,6 +1,3 @@
-using System;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using NUnit.Framework;
 
 namespace Uuid.Tests
@@ -23,11 +20,8 @@ namespace Uuid.Tests
         public unsafe void Ctor_From_Ptr_IsOk()
         {
             var stackUuidBytes = stackalloc byte[16];
-            for (var i = 0; i < 16; i++)
-            {
-                stackUuidBytes[i] = _uuidBytes[i];
-            }
-            
+            for (var i = 0; i < 16; i++) stackUuidBytes[i] = _uuidBytes[i];
+
             var uuid = new Uuid(stackUuidBytes);
 
             var guidArray = new byte[16];

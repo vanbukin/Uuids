@@ -13,6 +13,8 @@ namespace Uuid
     [SuppressMessage("ReSharper", "RedundantIfElseBlock")]
     [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
     [SuppressMessage("ReSharper", "ArrangeRedundantParentheses")]
+    [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]
+    [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Local")]
     public readonly unsafe struct Uuid : IFormattable, IComparable, IComparable<Uuid>, IEquatable<Uuid>
     {
         static Uuid()
@@ -456,17 +458,11 @@ namespace Uuid
 
             internal void SetFailure(bool overflow, string failureMessage)
             {
-                if (_throwStyle == UuidParseThrowStyle.None)
-                {
-                    return;
-                }
+                if (_throwStyle == UuidParseThrowStyle.None) return;
 
                 if (overflow)
                 {
-                    if (_throwStyle == UuidParseThrowStyle.All)
-                    {
-                        throw new OverflowException(failureMessage);
-                    }
+                    if (_throwStyle == UuidParseThrowStyle.All) throw new OverflowException(failureMessage);
 
                     throw new FormatException("Unrecognized Uuid format.");
                 }
@@ -526,19 +522,19 @@ namespace Uuid
             }
         }
 
-        public static Uuid ParseExact(string input, string format) =>
-            ParseExact(
+        public static Uuid ParseExact(string input, string format)
+        {
+            return ParseExact(
                 input != null ? (ReadOnlySpan<char>) input : throw new ArgumentNullException(nameof(input)),
                 format != null ? (ReadOnlySpan<char>) format : throw new ArgumentNullException(nameof(format)));
+        }
 
         public static Uuid ParseExact(ReadOnlySpan<char> input, ReadOnlySpan<char> format)
         {
             if (format.Length != 1)
-            {
                 // all acceptable format strings are of length 1
                 throw new FormatException(
                     "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
-            }
 
             input = input.Trim();
 
@@ -767,10 +763,10 @@ namespace Uuid
                 return false;
             }
 
-        
 
             var overflow = false;
-            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._uint0, ref overflow) || overflow)
+            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._uint0, ref overflow) ||
+                overflow)
             {
                 result.SetFailure(overflow, overflow
                     ? "Value was either too large or too small for a UInt32."
@@ -796,7 +792,8 @@ namespace Uuid
             }
 
             // Read in the number
-            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._short4, ref overflow) || overflow)
+            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._short4, ref overflow) ||
+                overflow)
             {
                 result.SetFailure(overflow, overflow
                     ? "Value was either too large or too small for a UInt32."
@@ -822,7 +819,8 @@ namespace Uuid
             }
 
             // Read in the number
-            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._short6, ref overflow) || overflow)
+            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._short6, ref overflow) ||
+                overflow)
             {
                 result.SetFailure(overflow,
                     overflow
@@ -929,15 +927,10 @@ namespace Uuid
         {
             if ((uint) uuidString.Length > 0)
             {
-                if (uuidString[0] == '+')
-                {
-                    uuidString = uuidString.Slice(1);
-                }
+                if (uuidString[0] == '+') uuidString = uuidString.Slice(1);
 
                 if ((uint) uuidString.Length > 1 && uuidString[0] == '0' && (uuidString[1] | 0x20) == 'x')
-                {
                     uuidString = uuidString.Slice(2);
-                }
             }
 
             // Skip past leading 0s.
@@ -976,10 +969,7 @@ namespace Uuid
             {
             }
 
-            if (i == str.Length)
-            {
-                return str;
-            }
+            if (i == str.Length) return str;
 
             // There was at least one whitespace.  Copy over everything prior to it to a new array.
             var chArr = new char[str.Length];
@@ -994,19 +984,18 @@ namespace Uuid
             for (; i < str.Length; i++)
             {
                 var c = str[i];
-                if (!char.IsWhiteSpace(c))
-                {
-                    chArr[newLength++] = c;
-                }
+                if (!char.IsWhiteSpace(c)) chArr[newLength++] = c;
             }
 
             // Return the string with the whitespace removed.
             return new ReadOnlySpan<char>(chArr, 0, newLength);
         }
 
-        private static bool IsHexPrefix(ReadOnlySpan<char> str, int i) =>
-            i + 1 < str.Length &&
-            str[i] == '0' &&
-            (str[i + 1] | 0x20) == 'x';
+        private static bool IsHexPrefix(ReadOnlySpan<char> str, int i)
+        {
+            return i + 1 < str.Length &&
+                   str[i] == '0' &&
+                   (str[i + 1] | 0x20) == 'x';
+        }
     }
 }
