@@ -1,9 +1,5 @@
 using System;
-using System.Collections;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
-using System.Runtime.InteropServices;
-using System.Text;
 using NUnit.Framework;
 
 namespace Uuid.Tests
@@ -26,7 +22,7 @@ namespace Uuid.Tests
             new object[] {new byte[] {0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0}},
             new object[] {new byte[] {0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0, 0, 0}},
             new object[] {new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255, 0, 0, 0, 0}},
-            new object[] {new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255}},
+            new object[] {new byte[] {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 255, 255, 255, 255}}
         };
 
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
@@ -187,7 +183,7 @@ namespace Uuid.Tests
         }
 
         [TestCaseSource(nameof(IncorrectUuidBytesArraysAndExceptionTypes))]
-        public unsafe void Ctor_From_ReadOnlySpan_Incorrect_SameAsGuid(byte[] incorrectBytes, Type exceptionType)
+        public void Ctor_From_ReadOnlySpan_Incorrect_SameAsGuid(byte[] incorrectBytes, Type exceptionType)
         {
             Assert.Multiple(() =>
             {
@@ -510,7 +506,7 @@ namespace Uuid.Tests
 
                 var uuid = new Uuid(correctBytes);
                 var guid = new Guid(correctBytes);
-                
+
                 Assert.AreEqual(guid.GetHashCode(), uuid.GetHashCode());
             });
         }

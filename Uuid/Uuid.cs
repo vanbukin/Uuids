@@ -129,10 +129,10 @@ namespace Uuid
 
             var other = (Uuid) value;
 
-            if (other._ulong0 != _ulong0) 
+            if (other._ulong0 != _ulong0)
                 return _ulong0 < other._ulong0 ? -1 : 1;
 
-            if (other._ulong1 != _ulong1) 
+            if (other._ulong1 != _ulong1)
                 return _ulong1 < other._ulong1 ? -1 : 1;
 
             return 0;
@@ -161,7 +161,7 @@ namespace Uuid
 
             return _ulong0 == other._ulong0 && _ulong1 == other._ulong1;
         }
-        
+
         public bool Equals(Uuid other)
         {
             return _ulong0 == other._ulong0 && _ulong1 == other._ulong1;
