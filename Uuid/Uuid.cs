@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
@@ -84,7 +85,7 @@ namespace Uuid
 
         public Uuid(byte* bytes)
         {
-            this = Unsafe.Read<Uuid>(bytes);
+            this = Unsafe.ReadUnaligned<Uuid>(bytes);
         }
 
         public Uuid(ReadOnlySpan<byte> bytes)
@@ -437,21 +438,21 @@ namespace Uuid
             [FieldOffset(8)] internal uint _uint8;
             [FieldOffset(12)] internal uint _uint12;
 
-            [FieldOffset(0)] internal short _short0;
-            [FieldOffset(2)] internal short _short2;
-            [FieldOffset(4)] internal short _short4;
-            [FieldOffset(6)] internal short _short6;
-            [FieldOffset(8)] internal short _short8;
-            [FieldOffset(10)] internal short _short10;
-            [FieldOffset(12)] internal short _short12;
-            [FieldOffset(14)] internal short _short14;
+            [FieldOffset(0)] internal ushort _ushort0;
+            [FieldOffset(2)] internal ushort _ushort2;
+            [FieldOffset(4)] internal ushort _ushort4;
+            [FieldOffset(6)] internal ushort _ushort6;
+            [FieldOffset(8)] internal ushort _ushort8;
+            [FieldOffset(10)] internal ushort _ushort10;
+            [FieldOffset(12)] internal ushort _ushort12;
+            [FieldOffset(14)] internal ushort _ushort14;
         }
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
         private ref struct UuidResult
         {
-            [FieldOffset(0)] private readonly UuidParseThrowStyle _throwStyle;
-            [FieldOffset(1)] internal ParsedUuid _parsedUuid;
+            [FieldOffset(0)] internal ParsedUuid _parsedUuid;
+            [FieldOffset(16)] private readonly UuidParseThrowStyle _throwStyle;
 
             internal UuidResult(UuidParseThrowStyle canThrow) : this()
             {
@@ -578,29 +579,15 @@ namespace Uuid
             input = input.Trim();
 
             var parseResult = new UuidResult(UuidParseThrowStyle.None);
-            var success = false;
-            switch ((char) (format[0] | 0x20))
+            var success = (char) (format[0] | 0x20) switch
             {
-                case 'd':
-                    success = TryParseExactD(input, ref parseResult);
-                    break;
-
-                case 'n':
-                    success = TryParseExactN(input, ref parseResult);
-                    break;
-
-                case 'b':
-                    success = TryParseExactB(input, ref parseResult);
-                    break;
-
-                case 'p':
-                    success = TryParseExactP(input, ref parseResult);
-                    break;
-
-                case 'x':
-                    success = TryParseExactX(input, ref parseResult);
-                    break;
-            }
+                'd' => TryParseExactD(input, ref parseResult),
+                'n' => TryParseExactN(input, ref parseResult),
+                'b' => TryParseExactB(input, ref parseResult),
+                'p' => TryParseExactP(input, ref parseResult),
+                'x' => TryParseExactX(input, ref parseResult),
+                _ => false
+            };
 
             if (success)
             {
@@ -643,7 +630,7 @@ namespace Uuid
             if ((uint) uuidString.Length != 38 || uuidString[0] != '{' || uuidString[37] != '}')
             {
                 result.SetFailure(false,
-                    "Uuid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
+                    "Uuid should contain 32 digits with 4 dashes {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.");
                 return false;
             }
 
@@ -657,7 +644,7 @@ namespace Uuid
             if ((uint) uuidString.Length != 36)
             {
                 result.SetFailure(false,
-                    "Uuid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
+                    "Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
                 return false;
             }
 
@@ -669,19 +656,19 @@ namespace Uuid
 
             ref var parsedUuid = ref result._parsedUuid;
 
-            if (TryParseHex(uuidString.Slice(0, 8), out var uintTmp0)
-                && TryParseHex(uuidString.Slice(9, 4), out var uintTmp9)
-                && TryParseHex(uuidString.Slice(14, 4), out var uintTmp14)
-                && TryParseHex(uuidString.Slice(19, 4), out var uintTmp19)
-                && TryParseHex(uuidString.Slice(24, 4), out var uintTmp24)
-                && uint.TryParse(uuidString.Slice(28, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmp28))
+            if (TryParseHex(uuidString.Slice(0, 8), out uint uintTmpNormalized0)
+                && TryParseHex(uuidString.Slice(9, 4), out ushort uintTmpNormalized9)
+                && TryParseHex(uuidString.Slice(14, 4), out ushort uintTmpNormalized14)
+                && TryParseHex(uuidString.Slice(19, 4), out ushort uintTmpNormalized19)
+                && TryParseHex(uuidString.Slice(24, 4), out ushort uintTmpNormalized24)
+                && (uint.TryParse(uuidString.Slice(28, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw28)))
             {
-                parsedUuid._uint0 = uintTmp0;
-                parsedUuid._short4 = (short) uintTmp9;
-                parsedUuid._short6 = (short) uintTmp14;
-                parsedUuid._short8 = (short) uintTmp19;
-                parsedUuid._short10 = (short) uintTmp24;
-                parsedUuid._uint12 = uintTmp28;
+                parsedUuid._uint0 = uintTmpNormalized0;
+                parsedUuid._ushort4 = uintTmpNormalized9;
+                parsedUuid._ushort6 = uintTmpNormalized14;
+                parsedUuid._ushort8 = uintTmpNormalized19;
+                parsedUuid._ushort10 = uintTmpNormalized24;
+                parsedUuid._uint12 = BinaryPrimitives.ReverseEndianness(uintTmpRaw28);
                 return true;
             }
 
@@ -695,22 +682,22 @@ namespace Uuid
 
             if ((uint) uuidString.Length != 32)
             {
-                result.SetFailure(false, "Uuid should contain only 32 digits (xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx).");
+                result.SetFailure(false, "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
                 return false;
             }
 
             ref var parsedUuid = ref result._parsedUuid;
 
-            if (uint.TryParse(uuidString.Slice(0, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmp0)
-                && uint.TryParse(uuidString.Slice(8, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmp8)
-                && uint.TryParse(uuidString.Slice(16, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmp16)
-                && uint.TryParse(uuidString.Slice(24, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmp24)
+            if (uint.TryParse(uuidString.Slice(0, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw0)
+                && uint.TryParse(uuidString.Slice(8, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw8)
+                && uint.TryParse(uuidString.Slice(16, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw16)
+                && uint.TryParse(uuidString.Slice(24, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw24)
             )
             {
-                parsedUuid._uint0 = uintTmp0;
-                parsedUuid._uint4 = uintTmp8;
-                parsedUuid._uint8 = uintTmp16;
-                parsedUuid._uint12 = uintTmp24;
+                parsedUuid._uint0 = BinaryPrimitives.ReverseEndianness(uintTmpRaw0);
+                parsedUuid._uint4 = BinaryPrimitives.ReverseEndianness(uintTmpRaw8);
+                parsedUuid._uint8 = BinaryPrimitives.ReverseEndianness(uintTmpRaw16);
+                parsedUuid._uint12 = BinaryPrimitives.ReverseEndianness(uintTmpRaw24);
                 return true;
             }
 
@@ -794,11 +781,11 @@ namespace Uuid
             }
 
             // Read in the number
-            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._short4, ref overflow) ||
+            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._ushort4, ref overflow) ||
                 overflow)
             {
                 result.SetFailure(overflow, overflow
-                    ? "Value was either too large or too small for a UInt32."
+                    ? "Value was either too large or too small for a UInt16."
                     : "Uuid string should only contain hexadecimal characters.");
                 return false;
             }
@@ -821,12 +808,12 @@ namespace Uuid
             }
 
             // Read in the number
-            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._short6, ref overflow) ||
+            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._ushort6, ref overflow) ||
                 overflow)
             {
                 result.SetFailure(overflow,
                     overflow
-                        ? "Value was either too large or too small for a UInt32."
+                        ? "Value was either too large or too small for a UInt16."
                         : "Uuid string should only contain hexadecimal characters.");
                 return false;
             }
@@ -875,9 +862,7 @@ namespace Uuid
                 }
 
                 // Read in the number
-                uint byteVal;
-                if (!TryParseHex(uuidString.Slice(numStart, numLen), out byteVal, ref overflow) || overflow ||
-                    byteVal > byte.MaxValue)
+                if (!TryParseHex(uuidString.Slice(numStart, numLen), out byte byteVal, ref overflow) || overflow)
                 {
                     // The previous implementation had some odd inconsistencies, which are carried forward here.
                     // The byte values in the X format are treated as integers with regards to overflow, so
@@ -885,14 +870,12 @@ namespace Uuid
                     // in OverflowException.
                     result.SetFailure(overflow,
                         overflow
-                            ? "Value was either too large or too small for a UInt32."
-                            : byteVal > byte.MaxValue
-                                ? "Value was either too large or too small for an unsigned byte."
-                                : "Uuid string should only contain hexadecimal characters.");
+                            ? "Value was either too large or too small for an unsigned byte."
+                            : "Uuid string should only contain hexadecimal characters.");
                     return false;
                 }
 
-                Unsafe.Add(ref result._parsedUuid._byte8, i) = (byte) byteVal;
+                Unsafe.Add(ref result._parsedUuid._byte8, i) = byteVal;
             }
 
             // Check for last '}'
@@ -912,17 +895,92 @@ namespace Uuid
             return true;
         }
 
-        private static bool TryParseHex(ReadOnlySpan<char> uuidString, out short result, ref bool overflow)
+        private static bool TryParseHex(ReadOnlySpan<char> uuidString, out ushort result)
         {
-            var success = TryParseHex(uuidString, out uint tmp, ref overflow);
-            result = (short) tmp;
-            return success;
+            var overflowIgnored = false;
+            return TryParseHex(uuidString, out result, ref overflowIgnored);
         }
 
         private static bool TryParseHex(ReadOnlySpan<char> uuidString, out uint result)
         {
             var overflowIgnored = false;
             return TryParseHex(uuidString, out result, ref overflowIgnored);
+        }
+
+        private static bool TryParseHex(ReadOnlySpan<char> uuidString, out byte result, ref bool overflow)
+        {
+            if ((uint) uuidString.Length > 0)
+            {
+                if (uuidString[0] == '+') uuidString = uuidString.Slice(1);
+
+                if ((uint) uuidString.Length > 1 && uuidString[0] == '0' && (uuidString[1] | 0x20) == 'x')
+                    uuidString = uuidString.Slice(2);
+            }
+
+            // Skip past leading 0s.
+            var i = 0;
+            for (; i < uuidString.Length && uuidString[i] == '0'; i++)
+            {
+            }
+
+            var processedDigits = 0;
+            byte tmp = 0;
+            for (; i < uuidString.Length; i++)
+            {
+                int numValue;
+                var currentChar = uuidString[i];
+                if (currentChar >= (uint) CharToHexLookup.Length || (numValue = CharToHexLookup[currentChar]) == 0xFF)
+                {
+                    if (processedDigits > 2) overflow = true;
+                    result = 0;
+                    return false;
+                }
+
+                tmp = (byte) ((tmp * 16) + (uint) numValue);
+                processedDigits++;
+            }
+
+            if (processedDigits > 2) overflow = true;
+            result = BinaryPrimitives.ReverseEndianness(tmp);
+            return true;
+        }
+
+        private static bool TryParseHex(ReadOnlySpan<char> uuidString, out ushort result, ref bool overflow)
+        {
+            if ((uint) uuidString.Length > 0)
+            {
+                if (uuidString[0] == '+') uuidString = uuidString.Slice(1);
+
+                if ((uint) uuidString.Length > 1 && uuidString[0] == '0' && (uuidString[1] | 0x20) == 'x')
+                    uuidString = uuidString.Slice(2);
+            }
+
+            // Skip past leading 0s.
+            var i = 0;
+            for (; i < uuidString.Length && uuidString[i] == '0'; i++)
+            {
+            }
+
+            var processedDigits = 0;
+            ushort tmp = 0;
+            for (; i < uuidString.Length; i++)
+            {
+                int numValue;
+                var currentChar = uuidString[i];
+                if (currentChar >= (uint) CharToHexLookup.Length || (numValue = CharToHexLookup[currentChar]) == 0xFF)
+                {
+                    if (processedDigits > 4) overflow = true;
+                    result = 0;
+                    return false;
+                }
+
+                tmp = (ushort) ((tmp * 16) + (uint) numValue);
+                processedDigits++;
+            }
+
+            if (processedDigits > 4) overflow = true;
+            result = BinaryPrimitives.ReverseEndianness(tmp);
+            return true;
         }
 
         private static bool TryParseHex(ReadOnlySpan<char> uuidString, out uint result, ref bool overflow)
@@ -946,8 +1004,8 @@ namespace Uuid
             for (; i < uuidString.Length; i++)
             {
                 int numValue;
-                var c = uuidString[i];
-                if (c >= (uint) CharToHexLookup.Length || (numValue = CharToHexLookup[c]) == 0xFF)
+                var currentChar = uuidString[i];
+                if (currentChar >= (uint) CharToHexLookup.Length || (numValue = CharToHexLookup[currentChar]) == 0xFF)
                 {
                     if (processedDigits > 8) overflow = true;
                     result = 0;
@@ -959,7 +1017,7 @@ namespace Uuid
             }
 
             if (processedDigits > 8) overflow = true;
-            result = tmp;
+            result = BinaryPrimitives.ReverseEndianness(tmp);
             return true;
         }
 

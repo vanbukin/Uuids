@@ -14,9 +14,9 @@ namespace Uuid.Benchmarks
         private byte[] _guidBytes;
         private Guid _sameGuid;
         private Uuid _sameUuid;
-        private Uuid _uuid;
         private byte[] _uuidBytes;
         private byte* _uuidBytesPtr;
+        private Uuid _uuid;
 
         [GlobalSetup]
         public void Setup()
@@ -40,6 +40,7 @@ namespace Uuid.Benchmarks
                 76, 180, 23, 82, 195, 110, 17, 233, 156, 181, 42, 43, 226, 219, 204, 229
             });
             _uuidBytesPtr = (byte*) Marshal.AllocHGlobal(16);
+            // ReSharper disable once PossibleNullReferenceException
             _uuidBytesPtr[0] = 76;
             _uuidBytesPtr[1] = 180;
             _uuidBytesPtr[2] = 23;
