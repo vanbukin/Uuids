@@ -7,7 +7,7 @@ namespace Uuid.Benchmarks
         // ReSharper disable once UnusedParameter.Local
         private static void Main(string[] args)
         {
-            BenchmarkRunner.Run<UuidBenchmarks>();
+            BenchmarkRunner.Run<DumpCode>();
         }
     }
 }

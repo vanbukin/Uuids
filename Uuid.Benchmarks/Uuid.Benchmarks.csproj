@@ -6,6 +6,9 @@
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
         <LangVersion>8</LangVersion>
         <Nullable>disable</Nullable>
+        <PlatformTarget>AnyCPU</PlatformTarget>
+        <DebugType>pdbonly</DebugType>
+        <DebugSymbols>true</DebugSymbols>
     </PropertyGroup>
 
     <ItemGroup>
