@@ -16,7 +16,7 @@ namespace Uuid
     [SuppressMessage("ReSharper", "ArrangeRedundantParentheses")]
     [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]
     [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Local")]
-    public readonly unsafe struct Uuid : IFormattable, IComparable, IComparable<Uuid>, IEquatable<Uuid>
+    public unsafe struct Uuid : IFormattable, IComparable, IComparable<Uuid>, IEquatable<Uuid>
     {
         static Uuid()
         {
@@ -54,25 +54,25 @@ namespace Uuid
         public static readonly Uuid Empty = new Uuid();
 
 
-        [FieldOffset(0)] private readonly byte _byte0;
-        [FieldOffset(1)] private readonly byte _byte1;
-        [FieldOffset(2)] private readonly byte _byte2;
-        [FieldOffset(3)] private readonly byte _byte3;
-        [FieldOffset(4)] private readonly byte _byte4;
-        [FieldOffset(5)] private readonly byte _byte5;
-        [FieldOffset(6)] private readonly byte _byte6;
-        [FieldOffset(7)] private readonly byte _byte7;
-        [FieldOffset(8)] private readonly byte _byte8;
-        [FieldOffset(9)] private readonly byte _byte9;
-        [FieldOffset(10)] private readonly byte _byte10;
-        [FieldOffset(11)] private readonly byte _byte11;
-        [FieldOffset(12)] private readonly byte _byte12;
-        [FieldOffset(13)] private readonly byte _byte13;
-        [FieldOffset(14)] private readonly byte _byte14;
-        [FieldOffset(15)] private readonly byte _byte15;
+        [FieldOffset(0)] private byte _byte0;
+        [FieldOffset(1)] private byte _byte1;
+        [FieldOffset(2)] private byte _byte2;
+        [FieldOffset(3)] private byte _byte3;
+        [FieldOffset(4)] private byte _byte4;
+        [FieldOffset(5)] private byte _byte5;
+        [FieldOffset(6)] private byte _byte6;
+        [FieldOffset(7)] private byte _byte7;
+        [FieldOffset(8)] private byte _byte8;
+        [FieldOffset(9)] private byte _byte9;
+        [FieldOffset(10)] private byte _byte10;
+        [FieldOffset(11)] private byte _byte11;
+        [FieldOffset(12)] private byte _byte12;
+        [FieldOffset(13)] private byte _byte13;
+        [FieldOffset(14)] private byte _byte14;
+        [FieldOffset(15)] private byte _byte15;
 
-        [FieldOffset(0)] private readonly ulong _ulong0;
-        [FieldOffset(8)] private readonly ulong _ulong1;
+        [FieldOffset(0)] private ulong _ulong0;
+        [FieldOffset(8)] private ulong _ulong1;
 
         public Uuid(byte[] bytes)
         {
@@ -98,28 +98,13 @@ namespace Uuid
         public byte[] ToByteArray()
         {
             var result = new byte[16];
-            fixed (byte* bytePtr = result)
-            {
-                var ulongPtr = (ulong*) bytePtr;
-                ulongPtr[0] = _ulong0;
-                ulongPtr[1] = _ulong1;
-            }
-
+            MemoryMarshal.Write(result, ref this);
             return result;
         }
 
         public bool TryWriteBytes(Span<byte> destination)
         {
-            if ((uint) destination.Length < 16)
-                return false;
-            fixed (byte* bytePtr = &destination.GetPinnableReference())
-            {
-                var ulongPtr = (ulong*) bytePtr;
-                ulongPtr[0] = _ulong0;
-                ulongPtr[1] = _ulong1;
-            }
-
-            return true;
+            return MemoryMarshal.TryWrite(destination, ref this);
         }
 
         public int CompareTo(object? value)
@@ -191,6 +176,7 @@ namespace Uuid
             return ToString("D", null);
         }
 
+        [SuppressMessage("ReSharper", "IntroduceOptionalParameters.Global")]
         public string ToString(string? format)
         {
             return ToString(format, null);
