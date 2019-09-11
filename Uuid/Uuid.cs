@@ -139,12 +139,10 @@ namespace Uuid
         public override bool Equals(object? obj)
         {
             Uuid other;
-            // Check that o is a Uuid first
             if (obj == null || !(obj is Uuid))
                 return false;
             else
                 other = (Uuid) obj;
-
             return _ulong0 == other._ulong0 && _ulong1 == other._ulong1;
         }
 

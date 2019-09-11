@@ -14,9 +14,9 @@ namespace Uuid.Benchmarks
         private byte[] _guidBytes;
         private Guid _sameGuid;
         private Uuid _sameUuid;
+        private Uuid _uuid;
         private byte[] _uuidBytes;
         private byte* _uuidBytesPtr;
-        private Uuid _uuid;
 
         [GlobalSetup]
         public void Setup()
