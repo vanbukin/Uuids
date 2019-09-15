@@ -798,6 +798,60 @@ namespace Uuid.Tests
             });
         }
 
+
+        [TestCaseSource(typeof(TestData), nameof(TestData.CorrectUuidBytesArrays))]
+        public void Equals_Operator_SameObjects_SameAsGuid(byte[] correctBytes)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.AreEqual(16, correctBytes.Length);
+
+                var uuid1 = new Uuid(correctBytes);
+                var uuid2 = new Uuid(correctBytes);
+
+                var guid1 = new Guid(correctBytes);
+                var guid2 = new Guid(correctBytes);
+
+                Assert.IsTrue(guid1 == guid2);
+                Assert.IsTrue(uuid1 == uuid2);
+            });
+        }
+
+        [TestCaseSource(typeof(TestData), nameof(TestData.CorrectUuidBytesArrays))]
+        public void Equals_Operator_NotSameObjects_SameAsGuid(byte[] correctBytes)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.AreEqual(16, correctBytes.Length);
+
+                var uuidBytes1 = new byte[16];
+                var uuidBytes2 = new byte[16];
+                var uuidBytes3 = new byte[16];
+                Array.Copy(correctBytes, uuidBytes1, 16);
+                Array.Copy(correctBytes, uuidBytes2, 16);
+                Array.Copy(correctBytes, uuidBytes3, 16);
+
+                unchecked
+                {
+                    uuidBytes2[0]++;
+                    uuidBytes3[8]++;
+                }
+
+                var uuid1 = new Uuid(uuidBytes1);
+                var uuid2 = new Uuid(uuidBytes2);
+                var uuid3 = new Uuid(uuidBytes3);
+
+                var guid1 = new Guid(uuidBytes1);
+                var guid2 = new Guid(uuidBytes2);
+                var guid3 = new Guid(uuidBytes3);
+
+                Assert.IsTrue(guid1 != guid2);
+                Assert.IsTrue(guid1 != guid3);
+                Assert.IsTrue(uuid1 != uuid2);
+                Assert.IsTrue(uuid1 != uuid3);
+            });
+        }
+
         [TestCaseSource(typeof(TestData), nameof(TestData.CorrectUuidBytesArrays))]
         [SuppressMessage("ReSharper", "SuspiciousTypeConversion.Global")]
         public void GetHashCode_SameAsGuid(byte[] correctBytes)

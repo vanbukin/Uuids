@@ -71,8 +71,22 @@ namespace Uuid
         [FieldOffset(14)] private byte _byte14;
         [FieldOffset(15)] private byte _byte15;
 
-        [FieldOffset(0)] private ulong _ulong0;
-        [FieldOffset(8)] private ulong _ulong1;
+        [FieldOffset(0)] internal ulong _ulong0;
+        [FieldOffset(8)] internal ulong _ulong8;
+
+        [FieldOffset(0)] internal uint _uint0;
+        [FieldOffset(4)] internal uint _uint4;
+        [FieldOffset(8)] internal uint _uint8;
+        [FieldOffset(12)] internal uint _uint12;
+
+        [FieldOffset(0)] internal ushort _ushort0;
+        [FieldOffset(2)] internal ushort _ushort2;
+        [FieldOffset(4)] internal ushort _ushort4;
+        [FieldOffset(6)] internal ushort _ushort6;
+        [FieldOffset(8)] internal ushort _ushort8;
+        [FieldOffset(10)] internal ushort _ushort10;
+        [FieldOffset(12)] internal ushort _ushort12;
+        [FieldOffset(14)] internal ushort _ushort14;
 
         public Uuid(byte[] bytes)
         {
@@ -118,8 +132,8 @@ namespace Uuid
             if (other._ulong0 != _ulong0)
                 return _ulong0 < other._ulong0 ? -1 : 1;
 
-            if (other._ulong1 != _ulong1)
-                return _ulong1 < other._ulong1 ? -1 : 1;
+            if (other._ulong8 != _ulong8)
+                return _ulong8 < other._ulong8 ? -1 : 1;
 
             return 0;
         }
@@ -128,7 +142,7 @@ namespace Uuid
         {
             if (other._ulong0 != _ulong0) return _ulong0 < other._ulong0 ? -1 : 1;
 
-            if (other._ulong1 != _ulong1) return _ulong1 < other._ulong1 ? -1 : 1;
+            if (other._ulong8 != _ulong8) return _ulong8 < other._ulong8 ? -1 : 1;
 
             return 0;
         }
@@ -143,19 +157,20 @@ namespace Uuid
                 return false;
             else
                 other = (Uuid) obj;
-            return _ulong0 == other._ulong0 && _ulong1 == other._ulong1;
+            return _ulong0 == other._ulong0 && _ulong8 == other._ulong8;
         }
 
         public bool Equals(Uuid other)
         {
-            return _ulong0 == other._ulong0 && _ulong1 == other._ulong1;
+            return _ulong0 == other._ulong0 && _ulong8 == other._ulong8;
         }
 
         [SuppressMessage("ReSharper", "RedundantCast")]
         [SuppressMessage("ReSharper", "ArrangeRedundantParentheses")]
+        [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
         {
-            var xorULongs = _ulong0 ^ _ulong1;
+            var xorULongs = _ulong0 ^ _ulong8;
             return ((int) xorULongs) ^ (int) (xorULongs >> 32);
         }
 
@@ -395,47 +410,9 @@ namespace Uuid
         }
 
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
-        private ref struct ParsedUuid
-        {
-            [FieldOffset(0)] internal byte _byte0;
-            [FieldOffset(1)] internal byte _byte1;
-            [FieldOffset(2)] internal byte _byte2;
-            [FieldOffset(3)] internal byte _byte3;
-            [FieldOffset(4)] internal byte _byte4;
-            [FieldOffset(5)] internal byte _byte5;
-            [FieldOffset(6)] internal byte _byte6;
-            [FieldOffset(7)] internal byte _byte7;
-            [FieldOffset(8)] internal byte _byte8;
-            [FieldOffset(9)] internal byte _byte9;
-            [FieldOffset(10)] internal byte _byte10;
-            [FieldOffset(11)] internal byte _byte11;
-            [FieldOffset(12)] internal byte _byte12;
-            [FieldOffset(13)] internal byte _byte13;
-            [FieldOffset(14)] internal byte _byte14;
-            [FieldOffset(15)] internal byte _byte15;
-
-            [FieldOffset(0)] internal ulong _ulong0;
-            [FieldOffset(8)] internal ulong _ulong8;
-
-            [FieldOffset(0)] internal uint _uint0;
-            [FieldOffset(4)] internal uint _uint4;
-            [FieldOffset(8)] internal uint _uint8;
-            [FieldOffset(12)] internal uint _uint12;
-
-            [FieldOffset(0)] internal ushort _ushort0;
-            [FieldOffset(2)] internal ushort _ushort2;
-            [FieldOffset(4)] internal ushort _ushort4;
-            [FieldOffset(6)] internal ushort _ushort6;
-            [FieldOffset(8)] internal ushort _ushort8;
-            [FieldOffset(10)] internal ushort _ushort10;
-            [FieldOffset(12)] internal ushort _ushort12;
-            [FieldOffset(14)] internal ushort _ushort14;
-        }
-
-        [StructLayout(LayoutKind.Explicit, Pack = 1)]
         private ref struct UuidResult
         {
-            [FieldOffset(0)] internal ParsedUuid _parsedUuid;
+            [FieldOffset(0)] internal Uuid _parsedUuid;
             [FieldOffset(16)] private readonly UuidParseThrowStyle _throwStyle;
 
             internal UuidResult(UuidParseThrowStyle canThrow) : this()
@@ -464,7 +441,7 @@ namespace Uuid
                 throw new ArgumentNullException(nameof(uuidString));
             var result = new UuidResult(UuidParseThrowStyle.All);
             TryParseUuid(uuidString, ref result);
-            this = Unsafe.Read<Uuid>(&result._parsedUuid);
+            this = result._parsedUuid;
         }
 
         public static Uuid Parse(string input)
@@ -473,14 +450,14 @@ namespace Uuid
                 throw new ArgumentNullException(nameof(input));
             var result = new UuidResult(UuidParseThrowStyle.AllButOverflow);
             TryParseUuid((ReadOnlySpan<char>) input, ref result);
-            return Unsafe.Read<Uuid>(&result._parsedUuid);
+            return result._parsedUuid;
         }
 
         public static Uuid Parse(ReadOnlySpan<char> input)
         {
             var result = new UuidResult(UuidParseThrowStyle.AllButOverflow);
             TryParseUuid(input, ref result);
-            return Unsafe.Read<Uuid>(&result._parsedUuid);
+            return result._parsedUuid;
         }
 
         public static bool TryParse(string? input, out Uuid result)
@@ -499,7 +476,7 @@ namespace Uuid
             var parseResult = new UuidResult(UuidParseThrowStyle.None);
             if (TryParseUuid(input, ref parseResult))
             {
-                result = Unsafe.Read<Uuid>(&parseResult._parsedUuid);
+                result = parseResult._parsedUuid;
                 return true;
             }
             else
