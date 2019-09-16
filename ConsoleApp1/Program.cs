@@ -92,7 +92,19 @@ namespace ConsoleApp1
 
         public static unsafe void Main(string[] args)
         {
-      
+           // var uuid1 = new Uuid.Uuid("杦cb41752c36e11e99cb52a2be2dbcce4");
+            var charPtr = stackalloc char[1];
+            var charBytes = (byte*) charPtr;
+            charBytes[0] = 0;
+            charBytes[1] = 103;
+            var resultChar = charPtr[0];
+            var resultByte = (byte) resultChar;
+            var resultByteChar = (char) resultByte;
+            var resultByteCharPtr = (byte*) &resultByteChar;
+            var resultBytes0 = resultByteCharPtr[0];
+            var resultBytes1 = resultByteCharPtr[1];
+            var tt = 0;
+
 //            var byte0 = (byte) '0';
 //            var byte9 = (byte) '9';
 //            var byteA = (byte) 'A';
