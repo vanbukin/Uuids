@@ -27,6 +27,37 @@ namespace Uuid
                 TableToHex[i] = ((uint) chars[1] << 16) | chars[0];
             }
 
+            TableFromHexToBytes = (byte*) Marshal.AllocHGlobal(256).ToPointer();
+            for (var i = 0; i < 256; i++)
+            {
+                TableFromHexToBytes[i] = (char) i switch
+                {
+                    '0' => (byte) 0x0,
+                    '1' => (byte) 0x1,
+                    '2' => (byte) 0x2,
+                    '3' => (byte) 0x3,
+                    '4' => (byte) 0x4,
+                    '5' => (byte) 0x5,
+                    '6' => (byte) 0x6,
+                    '7' => (byte) 0x7,
+                    '8' => (byte) 0x8,
+                    '9' => (byte) 0x9,
+                    'a' => (byte) 0xa,
+                    'A' => (byte) 0xa,
+                    'b' => (byte) 0xb,
+                    'B' => (byte) 0xb,
+                    'c' => (byte) 0xc,
+                    'C' => (byte) 0xc,
+                    'd' => (byte) 0xd,
+                    'D' => (byte) 0xd,
+                    'e' => (byte) 0xe,
+                    'E' => (byte) 0xe,
+                    'f' => (byte) 0xf,
+                    'F' => (byte) 0xf,
+                    _ => byte.MaxValue
+                };
+            }
+
 #nullable disable
             // ReSharper disable once PossibleNullReferenceException
             FastAllocateString = (Func<int, string>) typeof(string)
@@ -34,6 +65,7 @@ namespace Uuid
                 .CreateDelegate(typeof(Func<int, string>));
 #nullable restore
         }
+
 
         internal static ReadOnlySpan<byte> CharToHexLookup => new byte[]
         {
@@ -47,6 +79,7 @@ namespace Uuid
         };
 
         private static readonly uint* TableToHex;
+        private static readonly byte* TableFromHexToBytes;
         private static readonly Func<int, string> FastAllocateString;
 
         // ReSharper disable once RedundantDefaultMemberInitializer
@@ -435,13 +468,699 @@ namespace Uuid
             }
         }
 
+//        public Uuid(string uuidString)
+//        {
+//            if (uuidString == null)
+//                throw new ArgumentNullException(nameof(uuidString));
+//            var result = new UuidResult(UuidParseThrowStyle.All);
+//            TryParseUuid(uuidString, ref result);
+//            this = result._parsedUuid;
+//        }
+
         public Uuid(string uuidString)
         {
             if (uuidString == null)
                 throw new ArgumentNullException(nameof(uuidString));
-            var result = new UuidResult(UuidParseThrowStyle.All);
-            TryParseUuid(uuidString, ref result);
-            this = result._parsedUuid;
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            fixed (char* uuidStringPtr = uuidString)
+            {
+                ParseCtor(uuidString, uuidStringPtr, resultPtr);
+            }
+
+            this = result;
+        }
+
+        private static void ParseCtor(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length == 0)
+                throw new FormatException("Unrecognized Uuid format.");
+
+            switch (uuidString[0])
+            {
+                case '(': // P
+                {
+                    if ((uint) uuidString.Length != 38u || uuidString[37] != ')')
+                    {
+                        throw new FormatException("Uuid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
+                    }
+
+                    if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
+                    {
+                        throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
+                    }
+
+                    if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
+                    {
+                        throw new FormatException("Uuid string should only contain hexadecimal characters.");
+                    }
+
+                    break;
+                }
+                case '{':
+                {
+                    if (uuidString.Contains('-')) // B
+                    {
+                        if ((uint) uuidString.Length != 38u || uuidString[37] != '}')
+                        {
+                            throw new FormatException("Uuid should contain 32 digits with 4 dashes {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.");
+                        }
+
+                        if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
+                        {
+                            throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
+                        }
+
+                        if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
+                        {
+                            throw new FormatException("Uuid string should only contain hexadecimal characters.");
+                        }
+                    }
+                    else // X
+                    {
+                        if ((uint) uuidString.Length != 68u || uuidString[0] != '{' || uuidString[66] != '}')
+                        {
+                            throw new FormatException(
+                                "Could not find a brace, or the length between the previous token and the brace was zero (i.e., '0x,'etc.).");
+                        }
+
+                        if (uuidStringPtr[11] != ','
+                            || uuidStringPtr[18] != ','
+                            || uuidStringPtr[25] != ','
+                            || uuidStringPtr[31] != ','
+                            || uuidStringPtr[36] != ','
+                            || uuidStringPtr[41] != ','
+                            || uuidStringPtr[46] != ','
+                            || uuidStringPtr[51] != ','
+                            || uuidStringPtr[56] != ','
+                            || uuidStringPtr[61] != ',')
+                        {
+                            throw new FormatException(
+                                "Could not find a comma, or the length between the previous token and the comma was zero (i.e., '0x,'etc.).");
+                        }
+
+                        if (uuidStringPtr[1] != '0'
+                            || uuidStringPtr[2] != 'x'
+                            || uuidStringPtr[12] != '0'
+                            || uuidStringPtr[13] != 'x'
+                            || uuidStringPtr[19] != '0'
+                            || uuidStringPtr[20] != 'x'
+                            || uuidStringPtr[27] != '0'
+                            || uuidStringPtr[28] != 'x'
+                            || uuidStringPtr[32] != '0'
+                            || uuidStringPtr[33] != 'x'
+                            || uuidStringPtr[37] != '0'
+                            || uuidStringPtr[38] != 'x'
+                            || uuidStringPtr[42] != '0'
+                            || uuidStringPtr[43] != 'x'
+                            || uuidStringPtr[47] != '0'
+                            || uuidStringPtr[48] != 'x'
+                            || uuidStringPtr[52] != '0'
+                            || uuidStringPtr[53] != 'x'
+                            || uuidStringPtr[57] != '0'
+                            || uuidStringPtr[58] != 'x'
+                            || uuidStringPtr[62] != '0'
+                            || uuidStringPtr[63] != 'x')
+                        {
+                            throw new FormatException("Expected 0x prefix.");
+                        }
+
+                        if (uuidStringPtr[67] != '}')
+                        {
+                            throw new FormatException("Could not find the ending brace.");
+                        }
+
+                        if (!TryParsePtrX(uuidStringPtr, resultPtr))
+                        {
+                            throw new FormatException("Uuid string should only contain hexadecimal characters.");
+                        }
+                    }
+
+                    break;
+                }
+                default:
+                {
+                    if (uuidString.Contains('-')) // D
+                    {
+                        // e.g. "d85b1407-351d-4694-9392-03acc5870eb1"
+                        if ((uint) uuidString.Length != 36u)
+                        {
+                            throw new FormatException("Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
+                        }
+
+                        if (uuidString[8] != '-' || uuidString[13] != '-' || uuidString[18] != '-' || uuidString[23] != '-')
+                        {
+                            throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
+                        }
+
+                        if (!TryParsePtrD(uuidStringPtr, resultPtr))
+                        {
+                            throw new FormatException("Uuid string should only contain hexadecimal characters.");
+                        }
+                    }
+                    else // N
+                    {
+                        if ((uint) uuidString.Length != 32u)
+                        {
+                            throw new FormatException(
+                                "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
+                        }
+
+                        if (!TryParsePtrN(uuidStringPtr, resultPtr))
+                        {
+                            throw new FormatException("Uuid string should only contain hexadecimal characters.");
+                        }
+                    }
+
+                    break;
+                }
+            }
+
+//            uuidString = uuidString.Trim(); // Remove whitespace from beginning and end
+//
+//            if (uuidString.Length == 0)
+//            {
+//                result.SetFailure(false, "Unrecognized Uuid format.");
+//                return false;
+//            }
+//
+//            return uuidString[0] switch
+//            {
+//                '(' => TryParseExactP(uuidString, ref result),
+//                '{' => uuidString.Contains('-')
+//                    ? TryParseExactB(uuidString, ref result)
+//                    : TryParseExactX(uuidString, ref result),
+//                _ => uuidString.Contains('-')
+//                    ? TryParseExactD(uuidString, ref result)
+//                    : TryParseExactN(uuidString, ref result),
+//            };
+        }
+
+        private static bool TryParsePtrN(char* value, byte* resultPtr)
+        {
+            // e.g. "d85b1407351d4694939203acc5870eb1"
+
+            byte hexByteHi;
+            byte hexByteLow;
+            // 0 byte
+            if ((hexByteHi = TableFromHexToBytes[value[0]]) != 0xFF
+                && (hexByteLow = TableFromHexToBytes[value[1]]) != 0xFF)
+            {
+                resultPtr[0] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                // 1 byte
+                if ((hexByteHi = TableFromHexToBytes[value[2]]) != 0xFF
+                    && (hexByteLow = TableFromHexToBytes[value[3]]) != 0xFF)
+                {
+                    resultPtr[1] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                    // 2 byte
+                    if ((hexByteHi = TableFromHexToBytes[value[4]]) != 0xFF
+                        && (hexByteLow = TableFromHexToBytes[value[5]]) != 0xFF)
+                    {
+                        resultPtr[2] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                        // 3 byte
+                        if ((hexByteHi = TableFromHexToBytes[value[6]]) != 0xFF
+                            && (hexByteLow = TableFromHexToBytes[value[7]]) != 0xFF)
+                        {
+                            resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                            // 4 byte
+                            if ((hexByteHi = TableFromHexToBytes[value[8]]) != 0xFF
+                                && (hexByteLow = TableFromHexToBytes[value[9]]) != 0xFF)
+                            {
+                                resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                // 5 byte
+                                if ((hexByteHi = TableFromHexToBytes[value[10]]) != 0xFF
+                                    && (hexByteLow = TableFromHexToBytes[value[11]]) != 0xFF)
+                                {
+                                    resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                    // 6 byte
+                                    if ((hexByteHi = TableFromHexToBytes[value[12]]) != 0xFF
+                                        && (hexByteLow = TableFromHexToBytes[value[13]]) != 0xFF)
+                                    {
+                                        resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                        // 7 byte
+                                        if ((hexByteHi = TableFromHexToBytes[value[14]]) != 0xFF
+                                            && (hexByteLow = TableFromHexToBytes[value[15]]) != 0xFF)
+                                        {
+                                            resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                            // 8 byte
+                                            if ((hexByteHi = TableFromHexToBytes[value[16]]) != 0xFF
+                                                && (hexByteLow = TableFromHexToBytes[value[17]]) != 0xFF)
+                                            {
+                                                resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                // 9 byte
+                                                if ((hexByteHi = TableFromHexToBytes[value[18]]) != 0xFF
+                                                    && (hexByteLow = TableFromHexToBytes[value[19]]) != 0xFF)
+                                                {
+                                                    resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                    // 10 byte
+                                                    if ((hexByteHi = TableFromHexToBytes[value[20]]) != 0xFF
+                                                        && (hexByteLow = TableFromHexToBytes[value[21]]) != 0xFF)
+                                                    {
+                                                        resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                        // 11 byte
+                                                        if ((hexByteHi = TableFromHexToBytes[value[22]]) != 0xFF
+                                                            && (hexByteLow = TableFromHexToBytes[value[23]]) != 0xFF)
+                                                        {
+                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                            // 12 byte
+                                                            if ((hexByteHi = TableFromHexToBytes[value[24]]) != 0xFF
+                                                                && (hexByteLow = TableFromHexToBytes[value[25]]) != 0xFF)
+                                                            {
+                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                // 13 byte
+                                                                if ((hexByteHi = TableFromHexToBytes[value[26]]) != 0xFF
+                                                                    && (hexByteLow = TableFromHexToBytes[value[27]]) != 0xFF)
+                                                                {
+                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                    // 14 byte
+                                                                    if ((hexByteHi = TableFromHexToBytes[value[28]]) != 0xFF
+                                                                        && (hexByteLow = TableFromHexToBytes[value[29]]) != 0xFF)
+                                                                    {
+                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                        // 15 byte
+                                                                        if ((hexByteHi = TableFromHexToBytes[value[30]]) != 0xFF
+                                                                            && (hexByteLow = TableFromHexToBytes[value[31]]) != 0xFF)
+                                                                        {
+                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                            return true;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryParsePtrD(char* value, byte* resultPtr)
+        {
+            // e.g. "d85b1407-351d-4694-9392-03acc5870eb1"
+
+            byte hexByteHi;
+            byte hexByteLow;
+            // 0 byte
+            if ((hexByteHi = TableFromHexToBytes[value[0]]) != 0xFF
+                && (hexByteLow = TableFromHexToBytes[value[1]]) != 0xFF)
+            {
+                resultPtr[0] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                // 1 byte
+                if ((hexByteHi = TableFromHexToBytes[value[2]]) != 0xFF
+                    && (hexByteLow = TableFromHexToBytes[value[3]]) != 0xFF)
+                {
+                    resultPtr[1] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                    // 2 byte
+                    if ((hexByteHi = TableFromHexToBytes[value[4]]) != 0xFF
+                        && (hexByteLow = TableFromHexToBytes[value[5]]) != 0xFF)
+                    {
+                        resultPtr[2] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                        // 3 byte
+                        if ((hexByteHi = TableFromHexToBytes[value[6]]) != 0xFF
+                            && (hexByteLow = TableFromHexToBytes[value[7]]) != 0xFF)
+                        {
+                            resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                            // value[8] == '-'
+
+                            // 4 byte
+                            if ((hexByteHi = TableFromHexToBytes[value[9]]) != 0xFF
+                                && (hexByteLow = TableFromHexToBytes[value[10]]) != 0xFF)
+                            {
+                                resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                // 5 byte
+                                if ((hexByteHi = TableFromHexToBytes[value[11]]) != 0xFF
+                                    && (hexByteLow = TableFromHexToBytes[value[12]]) != 0xFF)
+                                {
+                                    resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                    // value[13] == '-'
+
+                                    // 6 byte
+                                    if ((hexByteHi = TableFromHexToBytes[value[14]]) != 0xFF
+                                        && (hexByteLow = TableFromHexToBytes[value[15]]) != 0xFF)
+                                    {
+                                        resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                        // 7 byte
+                                        if ((hexByteHi = TableFromHexToBytes[value[16]]) != 0xFF
+                                            && (hexByteLow = TableFromHexToBytes[value[17]]) != 0xFF)
+                                        {
+                                            resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                            // value[18] == '-'
+
+                                            // 8 byte
+                                            if ((hexByteHi = TableFromHexToBytes[value[19]]) != 0xFF
+                                                && (hexByteLow = TableFromHexToBytes[value[20]]) != 0xFF)
+                                            {
+                                                resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                // 9 byte
+                                                if ((hexByteHi = TableFromHexToBytes[value[21]]) != 0xFF
+                                                    && (hexByteLow = TableFromHexToBytes[value[22]]) != 0xFF)
+                                                {
+                                                    resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                                    // value[23] == '-'
+
+                                                    // 10 byte
+                                                    if ((hexByteHi = TableFromHexToBytes[value[24]]) != 0xFF
+                                                        && (hexByteLow = TableFromHexToBytes[value[25]]) != 0xFF)
+                                                    {
+                                                        resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                        // 11 byte
+                                                        if ((hexByteHi = TableFromHexToBytes[value[26]]) != 0xFF
+                                                            && (hexByteLow = TableFromHexToBytes[value[27]]) != 0xFF)
+                                                        {
+                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                            // 12 byte
+                                                            if ((hexByteHi = TableFromHexToBytes[value[28]]) != 0xFF
+                                                                && (hexByteLow = TableFromHexToBytes[value[29]]) != 0xFF)
+                                                            {
+                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                // 13 byte
+                                                                if ((hexByteHi = TableFromHexToBytes[value[30]]) != 0xFF
+                                                                    && (hexByteLow = TableFromHexToBytes[value[31]]) != 0xFF)
+                                                                {
+                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                    // 14 byte
+                                                                    if ((hexByteHi = TableFromHexToBytes[value[32]]) != 0xFF
+                                                                        && (hexByteLow = TableFromHexToBytes[value[33]]) != 0xFF)
+                                                                    {
+                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                        // 15 byte
+                                                                        if ((hexByteHi = TableFromHexToBytes[value[34]]) != 0xFF
+                                                                            && (hexByteLow = TableFromHexToBytes[value[35]]) != 0xFF)
+                                                                        {
+                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                            return true;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool TryParsePtrPorB(char* value, byte* resultPtr)
+        {
+            // e.g. "{d85b1407-351d-4694-9392-03acc5870eb1}"
+            // e.g. "(d85b1407-351d-4694-9392-03acc5870eb1)"
+
+            byte hexByteHi;
+            byte hexByteLow;
+            // 0 byte
+            if ((hexByteHi = TableFromHexToBytes[value[1]]) != 0xFF
+                && (hexByteLow = TableFromHexToBytes[value[2]]) != 0xFF)
+            {
+                resultPtr[0] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                // 1 byte
+                if ((hexByteHi = TableFromHexToBytes[value[3]]) != 0xFF
+                    && (hexByteLow = TableFromHexToBytes[value[4]]) != 0xFF)
+                {
+                    resultPtr[1] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                    // 2 byte
+                    if ((hexByteHi = TableFromHexToBytes[value[5]]) != 0xFF
+                        && (hexByteLow = TableFromHexToBytes[value[6]]) != 0xFF)
+                    {
+                        resultPtr[2] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                        // 3 byte
+                        if ((hexByteHi = TableFromHexToBytes[value[7]]) != 0xFF
+                            && (hexByteLow = TableFromHexToBytes[value[8]]) != 0xFF)
+                        {
+                            resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                            // value[9] == '-'
+
+                            // 4 byte
+                            if ((hexByteHi = TableFromHexToBytes[value[10]]) != 0xFF
+                                && (hexByteLow = TableFromHexToBytes[value[11]]) != 0xFF)
+                            {
+                                resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                // 5 byte
+                                if ((hexByteHi = TableFromHexToBytes[value[12]]) != 0xFF
+                                    && (hexByteLow = TableFromHexToBytes[value[13]]) != 0xFF)
+                                {
+                                    resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                    // value[14] == '-'
+
+                                    // 6 byte
+                                    if ((hexByteHi = TableFromHexToBytes[value[15]]) != 0xFF
+                                        && (hexByteLow = TableFromHexToBytes[value[16]]) != 0xFF)
+                                    {
+                                        resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                        // 7 byte
+                                        if ((hexByteHi = TableFromHexToBytes[value[17]]) != 0xFF
+                                            && (hexByteLow = TableFromHexToBytes[value[18]]) != 0xFF)
+                                        {
+                                            resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                            // value[19] == '-'
+
+                                            // 8 byte
+                                            if ((hexByteHi = TableFromHexToBytes[value[20]]) != 0xFF
+                                                && (hexByteLow = TableFromHexToBytes[value[21]]) != 0xFF)
+                                            {
+                                                resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                // 9 byte
+                                                if ((hexByteHi = TableFromHexToBytes[value[22]]) != 0xFF
+                                                    && (hexByteLow = TableFromHexToBytes[value[23]]) != 0xFF)
+                                                {
+                                                    resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                                    // value[24] == '-'
+
+                                                    // 10 byte
+                                                    if ((hexByteHi = TableFromHexToBytes[value[25]]) != 0xFF
+                                                        && (hexByteLow = TableFromHexToBytes[value[26]]) != 0xFF)
+                                                    {
+                                                        resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                        // 11 byte
+                                                        if ((hexByteHi = TableFromHexToBytes[value[27]]) != 0xFF
+                                                            && (hexByteLow = TableFromHexToBytes[value[28]]) != 0xFF)
+                                                        {
+                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                            // 12 byte
+                                                            if ((hexByteHi = TableFromHexToBytes[value[29]]) != 0xFF
+                                                                && (hexByteLow = TableFromHexToBytes[value[30]]) != 0xFF)
+                                                            {
+                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                // 13 byte
+                                                                if ((hexByteHi = TableFromHexToBytes[value[31]]) != 0xFF
+                                                                    && (hexByteLow = TableFromHexToBytes[value[32]]) != 0xFF)
+                                                                {
+                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                    // 14 byte
+                                                                    if ((hexByteHi = TableFromHexToBytes[value[33]]) != 0xFF
+                                                                        && (hexByteLow = TableFromHexToBytes[value[34]]) != 0xFF)
+                                                                    {
+                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                        // 15 byte
+                                                                        if ((hexByteHi = TableFromHexToBytes[value[35]]) != 0xFF
+                                                                            && (hexByteLow = TableFromHexToBytes[value[36]]) != 0xFF)
+                                                                        {
+                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                            return true;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        private static bool TryParsePtrX(char* value, byte* resultPtr)
+        {
+            // e.g. "{0xd85b1407,0x351d,0x4694,{0x93,0x92,0x03,0xac,0xc5,0x87,0x0e,0xb1}}"
+
+            byte hexByteHi;
+            byte hexByteLow;
+            // value[0] == '{'
+            // value[1] == '0'
+            // value[2] == 'x'
+            // 0 byte
+            if ((hexByteHi = TableFromHexToBytes[value[3]]) != 0xFF
+                && (hexByteLow = TableFromHexToBytes[value[4]]) != 0xFF)
+            {
+                resultPtr[0] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                // 1 byte
+                if ((hexByteHi = TableFromHexToBytes[value[5]]) != 0xFF
+                    && (hexByteLow = TableFromHexToBytes[value[6]]) != 0xFF)
+                {
+                    resultPtr[1] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                    // 2 byte
+                    if ((hexByteHi = TableFromHexToBytes[value[7]]) != 0xFF
+                        && (hexByteLow = TableFromHexToBytes[value[8]]) != 0xFF)
+                    {
+                        resultPtr[2] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                        // 3 byte
+                        if ((hexByteHi = TableFromHexToBytes[value[9]]) != 0xFF
+                            && (hexByteLow = TableFromHexToBytes[value[10]]) != 0xFF)
+                        {
+                            resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                            // value[11] == ','
+                            // value[12] == '0'
+                            // value[13] == 'x'
+
+                            // 4 byte
+                            if ((hexByteHi = TableFromHexToBytes[value[14]]) != 0xFF
+                                && (hexByteLow = TableFromHexToBytes[value[15]]) != 0xFF)
+                            {
+                                resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                // 5 byte
+                                if ((hexByteHi = TableFromHexToBytes[value[16]]) != 0xFF
+                                    && (hexByteLow = TableFromHexToBytes[value[17]]) != 0xFF)
+                                {
+                                    resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                    // value[18] == ','
+                                    // value[19] == '0'
+                                    // value[20] == 'x'
+
+                                    // 6 byte
+                                    if ((hexByteHi = TableFromHexToBytes[value[21]]) != 0xFF
+                                        && (hexByteLow = TableFromHexToBytes[value[22]]) != 0xFF)
+                                    {
+                                        resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                        // 7 byte
+                                        if ((hexByteHi = TableFromHexToBytes[value[23]]) != 0xFF
+                                            && (hexByteLow = TableFromHexToBytes[value[24]]) != 0xFF)
+                                        {
+                                            resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                            // value[25] == ','
+                                            // value[26] == '{'
+                                            // value[27] == '0'
+                                            // value[28] == 'x'
+
+                                            // 8 byte
+                                            if ((hexByteHi = TableFromHexToBytes[value[29]]) != 0xFF
+                                                && (hexByteLow = TableFromHexToBytes[value[30]]) != 0xFF)
+                                            {
+                                                resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                                // value[31] == ','
+                                                // value[32] == '0'
+                                                // value[33] == 'x'
+
+                                                // 9 byte
+                                                if ((hexByteHi = TableFromHexToBytes[value[34]]) != 0xFF
+                                                    && (hexByteLow = TableFromHexToBytes[value[35]]) != 0xFF)
+                                                {
+                                                    resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                                    // value[36] == ','
+                                                    // value[37] == '0'
+                                                    // value[38] == 'x'
+
+                                                    // 10 byte
+                                                    if ((hexByteHi = TableFromHexToBytes[value[39]]) != 0xFF
+                                                        && (hexByteLow = TableFromHexToBytes[value[40]]) != 0xFF)
+                                                    {
+                                                        resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                                        // value[41] == ','
+                                                        // value[42] == '0'
+                                                        // value[43] == 'x'
+
+                                                        // 11 byte
+                                                        if ((hexByteHi = TableFromHexToBytes[value[44]]) != 0xFF
+                                                            && (hexByteLow = TableFromHexToBytes[value[45]]) != 0xFF)
+                                                        {
+                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                                            // value[46] == ','
+                                                            // value[47] == '0'
+                                                            // value[48] == 'x'
+
+                                                            // 12 byte
+                                                            if ((hexByteHi = TableFromHexToBytes[value[49]]) != 0xFF
+                                                                && (hexByteLow = TableFromHexToBytes[value[50]]) != 0xFF)
+                                                            {
+                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                                                // value[51] == ','
+                                                                // value[52] == '0'
+                                                                // value[53] == 'x'
+
+                                                                // 13 byte
+                                                                if ((hexByteHi = TableFromHexToBytes[value[54]]) != 0xFF
+                                                                    && (hexByteLow = TableFromHexToBytes[value[55]]) != 0xFF)
+                                                                {
+                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                                                    // value[56] == ','
+                                                                    // value[57] == '0'
+                                                                    // value[58] == 'x'
+
+                                                                    // 14 byte
+                                                                    if ((hexByteHi = TableFromHexToBytes[value[59]]) != 0xFF
+                                                                        && (hexByteLow = TableFromHexToBytes[value[60]]) != 0xFF)
+                                                                    {
+                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+                                                                        // value[61] == ','
+                                                                        // value[62] == '0'
+                                                                        // value[63] == 'x'
+
+                                                                        // 15 byte
+                                                                        if ((hexByteHi = TableFromHexToBytes[value[64]]) != 0xFF
+                                                                            && (hexByteLow = TableFromHexToBytes[value[65]]) != 0xFF)
+                                                                        {
+                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                            return true;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return true;
         }
 
         public static Uuid Parse(string input)
@@ -562,6 +1281,7 @@ namespace Uuid
             }
         }
 
+
         private static bool TryParseUuid(ReadOnlySpan<char> uuidString, ref UuidResult result)
         {
             uuidString = uuidString.Trim(); // Remove whitespace from beginning and end
@@ -617,25 +1337,20 @@ namespace Uuid
 
             ref var parsedUuid = ref result._parsedUuid;
 
-            if (TryParseHex(uuidString.Slice(0, 8), out uint uintTmpNormalized0)
-                && TryParseHex(uuidString.Slice(9, 4), out ushort uintTmpNormalized9)
-                && TryParseHex(uuidString.Slice(14, 4), out ushort uintTmpNormalized14)
-                && TryParseHex(uuidString.Slice(19, 4), out ushort uintTmpNormalized19)
-                && TryParseHex(uuidString.Slice(24, 4), out ushort uintTmpNormalized24)
-                && (uint.TryParse(uuidString.Slice(28, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw28)))
+            if (TryParseHex(uuidString.Slice(0, 8), out parsedUuid._uint0)
+                && TryParseHex(uuidString.Slice(9, 4), out parsedUuid._ushort4)
+                && TryParseHex(uuidString.Slice(14, 4), out parsedUuid._ushort6)
+                && TryParseHex(uuidString.Slice(19, 4), out parsedUuid._ushort8)
+                && TryParseHex(uuidString.Slice(24, 4), out parsedUuid._ushort10)
+                && (TryParseHexToUint32(uuidString.Slice(28, 8), out parsedUuid._uint12)))
             {
-                parsedUuid._uint0 = uintTmpNormalized0;
-                parsedUuid._ushort4 = uintTmpNormalized9;
-                parsedUuid._ushort6 = uintTmpNormalized14;
-                parsedUuid._ushort8 = uintTmpNormalized19;
-                parsedUuid._ushort10 = uintTmpNormalized24;
-                parsedUuid._uint12 = BinaryPrimitives.ReverseEndianness(uintTmpRaw28);
                 return true;
             }
 
             result.SetFailure(false, "Uuid string should only contain hexadecimal characters.");
             return false;
         }
+
 
         private static bool TryParseExactN(ReadOnlySpan<char> uuidString, ref UuidResult result)
         {
@@ -647,18 +1362,9 @@ namespace Uuid
                 return false;
             }
 
-            ref var parsedUuid = ref result._parsedUuid;
 
-            if (uint.TryParse(uuidString.Slice(0, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw0)
-                && uint.TryParse(uuidString.Slice(8, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw8)
-                && uint.TryParse(uuidString.Slice(16, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw16)
-                && uint.TryParse(uuidString.Slice(24, 8), NumberStyles.AllowHexSpecifier, null, out var uintTmpRaw24)
-            )
+            if (TryDirectParseHexToUuid(uuidString, out result._parsedUuid))
             {
-                parsedUuid._uint0 = BinaryPrimitives.ReverseEndianness(uintTmpRaw0);
-                parsedUuid._uint4 = BinaryPrimitives.ReverseEndianness(uintTmpRaw8);
-                parsedUuid._uint8 = BinaryPrimitives.ReverseEndianness(uintTmpRaw16);
-                parsedUuid._uint12 = BinaryPrimitives.ReverseEndianness(uintTmpRaw24);
                 return true;
             }
 
@@ -853,6 +1559,63 @@ namespace Uuid
                 return false;
             }
 
+            return true;
+        }
+
+        private static bool TryDirectParseHexToUuid(ReadOnlySpan<char> value, out Uuid result)
+        {
+            var parsedUuid = new Uuid();
+            var parsedUuidPtr = (byte*) &parsedUuid;
+
+            for (var i = 0; i < 16; i++)
+            {
+                byte hexByteHi;
+                byte hexByteLow;
+                if ((hexByteHi = TableFromHexToBytes[value[i * 2]]) != 0xFF
+                    && (hexByteLow = TableFromHexToBytes[value[i * 2 + 1]]) != 0xFF)
+                {
+                    unchecked
+                    {
+                        parsedUuidPtr[i] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                    }
+                }
+                else
+                {
+                    result = new Uuid();
+                    return false;
+                }
+            }
+
+            result = parsedUuid;
+            return true;
+        }
+
+        private static bool TryParseHexToUint32(ReadOnlySpan<char> value, out uint result)
+        {
+            result = 0u;
+            if (value.IsEmpty || (uint) value.Length != 8)
+            {
+                return false;
+            }
+
+            var parsedData = 0u;
+            for (var i = 0; i < 4; i++)
+            {
+                byte hexByteHi;
+                byte hexByteLow;
+                if ((hexByteHi = TableFromHexToBytes[value[i * 2]]) != 0xFF
+                    && (hexByteLow = TableFromHexToBytes[value[i * 2 + 1]]) != 0xFF)
+                {
+                    var hexByte = (uint) ((hexByteHi << 4) | hexByteLow) << (i * 8);
+                    parsedData |= hexByte;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            result = parsedData;
             return true;
         }
 

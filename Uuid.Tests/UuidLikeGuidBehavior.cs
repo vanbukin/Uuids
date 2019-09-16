@@ -274,6 +274,33 @@ namespace Uuid.Tests
                 Assert.AreEqual(guidWithNonMixedEndianBytes.ToByteArray(), uuid.ToByteArray());
             });
         }
+        
+        [TestCaseSource(typeof(TestData), nameof(TestData.CorrectUuidN))]
+        [SuppressMessage("ReSharper", "SuspiciousTypeConversion.Global")]
+        public unsafe void CtorFromString_N_SameAsGuid(string correctUuid)
+        {
+            Assert.Multiple(() =>
+            {
+                Assert.AreEqual(32, correctUuid.Length);
+                var correctUuidNString = correctUuid;
+                var correctUuidBytes = ConvertHexStringToByteArray(correctUuidNString);
+
+                var guidWithNonMixedEndianBytes = new Guid(correctUuidBytes);
+                var guid = new Guid(correctUuid);
+                var uuid = new Uuid(correctUuid);
+                var uuidArray = new byte[16];
+                fixed (byte* pinnedUuidArray = uuidArray)
+                {
+                    *(Uuid*) pinnedUuidArray = uuid;
+                }
+
+                Assert.AreEqual(guid.ToString("N"), uuid.ToString("N"));
+                Assert.AreEqual(correctUuidNString, uuid.ToString("N"));
+                Assert.AreEqual(correctUuidBytes, uuidArray);
+                Assert.AreEqual(guidWithNonMixedEndianBytes.GetHashCode(), uuid.GetHashCode());
+                Assert.AreEqual(guidWithNonMixedEndianBytes.ToByteArray(), uuid.ToByteArray());
+            });
+        }
 
         [TestCaseSource(typeof(TestData), nameof(TestData.CorrectUuidB))]
         [SuppressMessage("ReSharper", "SuspiciousTypeConversion.Global")]

@@ -17,6 +17,11 @@ namespace Uuid.Benchmarks
         private Uuid _uuid;
         private byte[] _uuidBytes;
         private byte* _uuidBytesPtr;
+        private string _guidStringN;
+        private string _guidStringD;
+        private string _guidStringP;
+        private string _guidStringB;
+        private string _guidStringX;
 
         [GlobalSetup]
         public void Setup()
@@ -30,6 +35,11 @@ namespace Uuid.Benchmarks
             {
                 82, 23, 180, 76, 110, 195, 233, 17, 156, 181, 42, 43, 226, 219, 204, 228
             };
+            _guidStringN = "8ebd85638c94d04b6a9a72ace1cf398b";
+            _guidStringD = "8ebd8563-8c94-d04b-6a9a-72ace1cf398b";
+            _guidStringP = "(8ebd8563-8c94-d04b-6a9a-72ace1cf398b)";
+            _guidStringB = "{8ebd8563-8c94-d04b-6a9a-72ace1cf398b}";
+            _guidStringX = "{0x8ebd8563,0x8c94,0xd04b,{0x6a,0x9a,0x72,0xac,0xe1,0xcf,0x39,0x8b}}";
             _guid = new Guid("4cb41752c36e11e99cb52a2be2dbcce4");
             _sameGuid = new Guid("4cb41752c36e11e99cb52a2be2dbcce4");
             _differentGuid = new Guid("4cb41752c36e11e99cb52a2be2dbcce5");
@@ -58,231 +68,296 @@ namespace Uuid.Benchmarks
             _uuidBytesPtr[14] = 204;
             _uuidBytesPtr[15] = 228;
         }
+//
+//        [Benchmark]
+//        public Uuid uuid_CtorPtr()
+//        {
+//            return new Uuid(_uuidBytesPtr);
+//        }
+//
+//        [Benchmark]
+//        public Uuid uuid_CtorByteArray()
+//        {
+//            return new Uuid(_uuidBytes);
+//        }
+//
+//        [Benchmark]
+//        public Guid guid_CtorByteArray()
+//        {
+//            return new Guid(_guidBytes);
+//        }
+//
+//        [Benchmark]
+//        public Uuid uuid_CtorSpan()
+//        {
+//            var span = new ReadOnlySpan<byte>(_uuidBytesPtr, 16);
+//            return new Uuid(span);
+//        }
+//
+//        [Benchmark]
+//        public Guid guid_CtorSpan()
+//        {
+//            var span = new ReadOnlySpan<byte>(_uuidBytesPtr, 16);
+//            return new Guid(span);
+//        }
+//
+//        [Benchmark]
+//        public string uuid_ToString()
+//        {
+//            return _uuid.ToString();
+//        }
+//
+//        [Benchmark]
+//        public string guid_ToString()
+//        {
+//            return _guid.ToString();
+//        }
+//
+//        [Benchmark]
+//        public string uuid_ToString_D()
+//        {
+//            return _uuid.ToString("D");
+//        }
+//
+//        [Benchmark]
+//        public string guid_ToString_D()
+//        {
+//            return _guid.ToString("D");
+//        }
+//
+//        [Benchmark]
+//        public string uuid_ToString_N()
+//        {
+//            return _uuid.ToString("N");
+//        }
+//
+//        [Benchmark]
+//        public string guid_ToString_N()
+//        {
+//            return _guid.ToString("N");
+//        }
+//
+//        [Benchmark]
+//        public string uuid_ToString_B()
+//        {
+//            return _uuid.ToString("B");
+//        }
+//
+//        [Benchmark]
+//        public string guid_ToString_B()
+//        {
+//            return _guid.ToString("B");
+//        }
+//
+//        [Benchmark]
+//        public string uuid_ToString_P()
+//        {
+//            return _uuid.ToString("P");
+//        }
+//
+//        [Benchmark]
+//        public string guid_ToString_P()
+//        {
+//            return _guid.ToString("P");
+//        }
+//
+//        [Benchmark]
+//        public string uuid_ToString_X()
+//        {
+//            return _uuid.ToString("X");
+//        }
+//
+//        [Benchmark]
+//        public string guid_ToString_X()
+//        {
+//            return _guid.ToString("X");
+//        }
+//
+//        [Benchmark]
+//        public int uuid_GetHashCode()
+//        {
+//            return _uuid.GetHashCode();
+//        }
+//
+//        [Benchmark]
+//        public int guid_GetHashCode()
+//        {
+//            return _guid.GetHashCode();
+//        }
+//
+//        [Benchmark]
+//        public byte[] uuid_ToByteArray()
+//        {
+//            return _uuid.ToByteArray();
+//        }
+//
+//        [Benchmark]
+//        public byte[] guid_ToByteArray()
+//        {
+//            return _guid.ToByteArray();
+//        }
+//
+//        [Benchmark]
+//        public bool uuid_EqualsWithNull()
+//        {
+//            return _uuid.Equals(null);
+//        }
+//
+//        [Benchmark]
+//        public bool guid_EqualsWithNull()
+//        {
+//            return _guid.Equals(null);
+//        }
+//
+//        [Benchmark]
+//        public bool uuid_EqualsWithSame()
+//        {
+//            return _uuid.Equals(_sameUuid);
+//        }
+//
+//        [Benchmark]
+//        public bool guid_EqualsWithSame()
+//        {
+//            return _guid.Equals(_sameGuid);
+//        }
+//
+//        [Benchmark]
+//        public bool uuid_EqualsWithNotSame()
+//        {
+//            return _uuid.Equals(_differentUuid);
+//        }
+//
+//        [Benchmark]
+//        public bool guid_EqualsWithNotSame()
+//        {
+//            return _guid.Equals(_differentGuid);
+//        }
+//
+//        [Benchmark]
+//        public bool uuid_EqualsWithAnotherType()
+//        {
+//            return _uuid.Equals(_emptyObject);
+//        }
+//
+//        [Benchmark]
+//        public bool guid_EqualsWithAnotherType()
+//        {
+//            return _guid.Equals(_emptyObject);
+//        }
+//
+//        [Benchmark]
+//        public int uuid_CompareToSame()
+//        {
+//            return _uuid.CompareTo(_sameUuid);
+//        }
+//
+//        [Benchmark]
+//        public int guid_CompareToSame()
+//        {
+//            return _guid.CompareTo(_sameGuid);
+//        }
+//
+//        [Benchmark]
+//        public int uuid_CompareToDifferent()
+//        {
+//            return _uuid.CompareTo(_differentUuid);
+//        }
+//
+//        [Benchmark]
+//        public int guid_CompareToDifferent()
+//        {
+//            return _guid.CompareTo(_differentGuid);
+//        }
+//
+//        [Benchmark]
+//        public int uuid_CompareToNull()
+//        {
+//            return _uuid.CompareTo(null);
+//        }
+//
+//        [Benchmark]
+//        public int guid_CompareToNull()
+//        {
+//            return _guid.CompareTo(null);
+//        }
+//
+//        [Benchmark]
+//        public bool uuid_TryWriteBytes()
+//        {
+//            Span<byte> buffer = stackalloc byte[16];
+//            return _uuid.TryWriteBytes(buffer);
+//        }
+//
+//        [Benchmark]
+//        public bool guid_TryWriteBytes()
+//        {
+//            Span<byte> buffer = stackalloc byte[16];
+//            return _guid.TryWriteBytes(buffer);
+//        }
 
         [Benchmark]
-        public Uuid uuid_CtorPtr()
+        public Uuid uuid_CtorStringN()
         {
-            return new Uuid(_uuidBytesPtr);
+            return new Uuid(_guidStringN);
+        }
+
+
+        [Benchmark]
+        public Guid guid_CtorStringN()
+        {
+            return new Guid(_guidStringN);
         }
 
         [Benchmark]
-        public Uuid uuid_CtorByteArray()
+        public Uuid uuid_CtorStringD()
         {
-            return new Uuid(_uuidBytes);
+            return new Uuid(_guidStringD);
         }
 
-        [Benchmark]
-        public Guid guid_CtorByteArray()
-        {
-            return new Guid(_guidBytes);
-        }
 
         [Benchmark]
-        public Uuid uuid_CtorSpan()
+        public Guid guid_CtorStringD()
         {
-            var span = new ReadOnlySpan<byte>(_uuidBytesPtr, 16);
-            return new Uuid(span);
+            return new Guid(_guidStringD);
+        }
+        
+        [Benchmark]
+        public Uuid uuid_CtorStringP()
+        {
+            return new Uuid(_guidStringP);
         }
 
-        [Benchmark]
-        public Guid guid_CtorSpan()
-        {
-            var span = new ReadOnlySpan<byte>(_uuidBytesPtr, 16);
-            return new Guid(span);
-        }
 
         [Benchmark]
-        public string uuid_ToString()
+        public Guid guid_CtorStringP()
         {
-            return _uuid.ToString();
+            return new Guid(_guidStringP);
+        }
+        
+        [Benchmark]
+        public Uuid uuid_CtorStringB()
+        {
+            return new Uuid(_guidStringB);
         }
 
-        [Benchmark]
-        public string guid_ToString()
-        {
-            return _guid.ToString();
-        }
 
         [Benchmark]
-        public string uuid_ToString_D()
+        public Guid guid_CtorStringB()
         {
-            return _uuid.ToString("D");
+            return new Guid(_guidStringB);
+        }
+        
+        [Benchmark]
+        public Uuid uuid_CtorStringX()
+        {
+            return new Uuid(_guidStringX);
         }
 
-        [Benchmark]
-        public string guid_ToString_D()
-        {
-            return _guid.ToString("D");
-        }
 
         [Benchmark]
-        public string uuid_ToString_N()
+        public Guid guid_CtorStringX()
         {
-            return _uuid.ToString("N");
-        }
-
-        [Benchmark]
-        public string guid_ToString_N()
-        {
-            return _guid.ToString("N");
-        }
-
-        [Benchmark]
-        public string uuid_ToString_B()
-        {
-            return _uuid.ToString("B");
-        }
-
-        [Benchmark]
-        public string guid_ToString_B()
-        {
-            return _guid.ToString("B");
-        }
-
-        [Benchmark]
-        public string uuid_ToString_P()
-        {
-            return _uuid.ToString("P");
-        }
-
-        [Benchmark]
-        public string guid_ToString_P()
-        {
-            return _guid.ToString("P");
-        }
-
-        [Benchmark]
-        public string uuid_ToString_X()
-        {
-            return _uuid.ToString("X");
-        }
-
-        [Benchmark]
-        public string guid_ToString_X()
-        {
-            return _guid.ToString("X");
-        }
-
-        [Benchmark]
-        public int uuid_GetHashCode()
-        {
-            return _uuid.GetHashCode();
-        }
-
-        [Benchmark]
-        public int guid_GetHashCode()
-        {
-            return _guid.GetHashCode();
-        }
-
-        [Benchmark]
-        public byte[] uuid_ToByteArray()
-        {
-            return _uuid.ToByteArray();
-        }
-
-        [Benchmark]
-        public byte[] guid_ToByteArray()
-        {
-            return _guid.ToByteArray();
-        }
-
-        [Benchmark]
-        public bool uuid_EqualsWithNull()
-        {
-            return _uuid.Equals(null);
-        }
-
-        [Benchmark]
-        public bool guid_EqualsWithNull()
-        {
-            return _guid.Equals(null);
-        }
-
-        [Benchmark]
-        public bool uuid_EqualsWithSame()
-        {
-            return _uuid.Equals(_sameUuid);
-        }
-
-        [Benchmark]
-        public bool guid_EqualsWithSame()
-        {
-            return _guid.Equals(_sameGuid);
-        }
-
-        [Benchmark]
-        public bool uuid_EqualsWithNotSame()
-        {
-            return _uuid.Equals(_differentUuid);
-        }
-
-        [Benchmark]
-        public bool guid_EqualsWithNotSame()
-        {
-            return _guid.Equals(_differentGuid);
-        }
-
-        [Benchmark]
-        public bool uuid_EqualsWithAnotherType()
-        {
-            return _uuid.Equals(_emptyObject);
-        }
-
-        [Benchmark]
-        public bool guid_EqualsWithAnotherType()
-        {
-            return _guid.Equals(_emptyObject);
-        }
-
-        [Benchmark]
-        public int uuid_CompareToSame()
-        {
-            return _uuid.CompareTo(_sameUuid);
-        }
-
-        [Benchmark]
-        public int guid_CompareToSame()
-        {
-            return _guid.CompareTo(_sameGuid);
-        }
-
-        [Benchmark]
-        public int uuid_CompareToDifferent()
-        {
-            return _uuid.CompareTo(_differentUuid);
-        }
-
-        [Benchmark]
-        public int guid_CompareToDifferent()
-        {
-            return _guid.CompareTo(_differentGuid);
-        }
-
-        [Benchmark]
-        public int uuid_CompareToNull()
-        {
-            return _uuid.CompareTo(null);
-        }
-
-        [Benchmark]
-        public int guid_CompareToNull()
-        {
-            return _guid.CompareTo(null);
-        }
-
-        [Benchmark]
-        public bool uuid_TryWriteBytes()
-        {
-            Span<byte> buffer = stackalloc byte[16];
-            return _uuid.TryWriteBytes(buffer);
-        }
-
-        [Benchmark]
-        public bool guid_TryWriteBytes()
-        {
-            Span<byte> buffer = stackalloc byte[16];
-            return _guid.TryWriteBytes(buffer);
+            return new Guid(_guidStringX);
         }
     }
 }

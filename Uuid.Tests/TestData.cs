@@ -40,6 +40,23 @@ namespace Uuid.Tests
 
         // ReSharper disable once MemberCanBePrivate.Global
         // ReSharper disable once UnusedAutoPropertyAccessor.Global
+        public static object[] CorrectUuidN { get; } =
+        {
+            new object[] {"8ebd85638c94d04b6a9a72ace1cf398b"},
+            new object[] {"6385bd8e948c4bd09a6aac728b39cfe1"},
+            new object[] {"2bbd5967b4c341d7975e40e19916c50a"},
+            new object[] {"9b9870b4336f44e9a94d90b5576b73ed"},
+            new object[] {"6ee5c06fd99349b1832f5a313ff59d36"},
+            new object[] {"c5b81b2fd5e54bdebc8dbd248cf08bad"},
+            new object[] {"ff16f89106a741caa0d88fb87a497abc"},
+            new object[] {"17734475959f4a2b93ab01e8f05e03bf"},
+            new object[] {"106ed2da7b724f8e9f5159359c077095"},
+            new object[] {"1dc5979d1e454d678f89f896a02dfb47"},
+            new object[] {"2a4f1fcfa2fe4eed847df41ad93e35d5"}
+        };
+
+        // ReSharper disable once MemberCanBePrivate.Global
+        // ReSharper disable once UnusedAutoPropertyAccessor.Global
         public static object[] CorrectUuidB { get; } =
         {
             new object[] {"{8ebd8563-8c94-d04b-6a9a-72ace1cf398b}"},
@@ -151,21 +168,6 @@ namespace Uuid.Tests
                 new byte[] {163, 167, 252, 114, 206, 122, 17, 233, 128, 237, 0, 13, 58, 17, 37, 233, 255}, // 17 bytes
                 typeof(ArgumentException)
             }
-        };
-
-        public static object[] CorrectUuidX1 { get; } =
-        {
-            new object[] {"{0x8ebd8563,0x8c94,0xd04b,{0x6a,0x9a,0x72,0xac,0xe1,0xcf,0x39,0x8b}}"},
-            new object[] {"{0x6385bd8e,0x948c,0x4bd0,{0x9a,0x6a,0xac,0x72,0x8b,0x39,0xcf,0xe1}}"},
-            new object[] {"{0x2bbd5967,0xb4c3,0x41d7,{0x97,0x5e,0x40,0xe1,0x99,0x16,0xc5,0x0a}}"},
-            new object[] {"{0x9b9870b4,0x336f,0x44e9,{0xa9,0x4d,0x90,0xb5,0x57,0x6b,0x73,0xed}}"},
-            new object[] {"{0x6ee5c06f,0xd993,0x49b1,{0x83,0x2f,0x5a,0x31,0x3f,0xf5,0x9d,0x36}}"},
-            new object[] {"{0xc5b81b2f,0xd5e5,0x4bde,{0xbc,0x8d,0xbd,0x24,0x8c,0xf0,0x8b,0xad}}"},
-            new object[] {"{0xff16f891,0x06a7,0x41ca,{0xa0,0xd8,0x8f,0xb8,0x7a,0x49,0x7a,0xbc}}"},
-            new object[] {"{0x17734475,0x959f,0x4a2b,{0x93,0xab,0x01,0xe8,0xf0,0x5e,0x03,0xbf}}"},
-            new object[] {"{0x106ed2da,0x7b72,0x4f8e,{0x9f,0x51,0x59,0x35,0x9c,0x07,0x70,0x95}}"},
-            new object[] {"{0x1dc5979d,0x1e45,0x4d67,{0x8f,0x89,0xf8,0x96,0xa0,0x2d,0xfb,0x47}}"},
-            new object[] {"{0x2a4f1fcf,0xa2fe,0x4eed,{0x84,0x7d,0xf4,0x1a,0xd9,0x3e,0x35,0xd5}}"}
         };
     }
 }
