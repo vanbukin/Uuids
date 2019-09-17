@@ -12,22 +12,22 @@ namespace Uuid.Benchmarks
         private Uuid _differentUuid;
         private Guid _guid;
         private byte[] _guidBytes;
+        private string _guidStringB;
+        private string _guidStringD;
+        private string _guidStringN;
+        private string _guidStringP;
+        private string _guidStringX;
+        private string[] _randomUuidsN_1_000_000;
+        private string[] _randomUuidsN_10_000;
+
+        private string[] _randomUuidsN_100;
+        private string[] _randomUuidsN_100_000;
+        private string[] _randomUuidsN_1000;
         private Guid _sameGuid;
         private Uuid _sameUuid;
         private Uuid _uuid;
         private byte[] _uuidBytes;
         private byte* _uuidBytesPtr;
-        private string _guidStringN;
-        private string _guidStringD;
-        private string _guidStringP;
-        private string _guidStringB;
-        private string _guidStringX;
-
-        private string[] _randomUuidsN_100;
-        private string[] _randomUuidsN_1000;
-        private string[] _randomUuidsN_10_000;
-        private string[] _randomUuidsN_100_000;
-        private string[] _randomUuidsN_1_000_000;
 
 
         [GlobalSetup]
@@ -88,10 +88,7 @@ namespace Uuid.Benchmarks
             var result = new string[count];
             for (var i = 0; i < count; i++)
             {
-                for (var j = 0; j < 4; j++)
-                {
-                    uuidIntegers[j] = random.Next();
-                }
+                for (var j = 0; j < 4; j++) uuidIntegers[j] = random.Next();
 
                 var bytesOfUuid = new ReadOnlySpan<byte>(uuidIntegers, 16).ToArray();
                 var nString = BitConverter

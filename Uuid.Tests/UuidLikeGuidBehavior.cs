@@ -274,7 +274,7 @@ namespace Uuid.Tests
                 Assert.AreEqual(guidWithNonMixedEndianBytes.ToByteArray(), uuid.ToByteArray());
             });
         }
-        
+
         [TestCaseSource(typeof(TestData), nameof(TestData.CorrectUuidN))]
         [SuppressMessage("ReSharper", "SuspiciousTypeConversion.Global")]
         public unsafe void CtorFromString_N_SameAsGuid(string correctUuid)

@@ -13,7 +13,6 @@ namespace ConsoleApp1
         {
             TableFromHexToBytes = (byte*) Marshal.AllocHGlobal(256).ToPointer();
             for (var i = 0; i < 256; i++)
-            {
                 TableFromHexToBytes[i] = (char) i switch
                 {
                     '0' => (byte) 0x0,
@@ -40,17 +39,13 @@ namespace ConsoleApp1
                     'F' => (byte) 0xf,
                     _ => byte.MaxValue
                 };
-            }
         }
 
 
         private static bool TryParseHexToUint32(ReadOnlySpan<char> value, out uint result)
         {
             result = 0u;
-            if (value.IsEmpty || (uint) value.Length != 8)
-            {
-                return false;
-            }
+            if (value.IsEmpty || (uint) value.Length != 8) return false;
 
             var parsedData = 0u;
             for (var i = 0; i < 4; i++)
@@ -73,7 +68,7 @@ namespace ConsoleApp1
             return true;
         }
 
-        private static unsafe byte[] GetNumberBytes(uint number)
+        private static byte[] GetNumberBytes(uint number)
         {
             var bytesOnStack = stackalloc byte[4];
             ((uint*) bytesOnStack)[0] = number;
@@ -87,7 +82,7 @@ namespace ConsoleApp1
 
         private static void GenerateGarbage()
         {
-            for (int i = 0; i < 1_000_000; i++)
+            for (var i = 0; i < 1_000_000; i++)
             {
                 var str = i.ToString();
             }
@@ -106,7 +101,6 @@ namespace ConsoleApp1
             GenerateGarbage();
             var spanExternal = new Span<char>(ptr, length);
             for (var i = 0; i < length; i++)
-            {
                 if (i % 10 == 0)
                 {
                     GenerateGarbage();
@@ -115,12 +109,11 @@ namespace ConsoleApp1
                     var spanAfter = new Span<char>(ptr, length);
                     var xx = 0;
                 }
-            }
 
             var tt = 0;
         }
 
-        public static unsafe void Main(string[] args)
+        public static void Main(string[] args)
         {
             // var uuid1 = new Uuid.Uuid("杦cb41752c36e11e99cb52a2be2dbcce4");
             //var uuid = Uuid.Uuid.Parse("4cb41752c36e11e99cb52a2be2dbcce4");
@@ -194,7 +187,7 @@ namespace ConsoleApp1
             var end = 0;
         }
 
-        private static unsafe ParseResult Parse(ReadOnlySpan<char> chars)
+        private static ParseResult Parse(ReadOnlySpan<char> chars)
         {
             var stringToParse = new string(chars);
             var uintBigEndianResult = 0u;
@@ -212,12 +205,10 @@ namespace ConsoleApp1
             var customResultBytes = new byte[4];
             var customWasParsed = TryParseHexToUint32(chars, out var customResult);
             if (customWasParsed)
-            {
                 fixed (byte* customResultBytesPtr = customResultBytes)
                 {
                     ((uint*) customResultBytesPtr)[0] = customResult;
                 }
-            }
 
             return new ParseResult(
                 stringToParse,

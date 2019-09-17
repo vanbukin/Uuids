@@ -35,7 +35,6 @@ namespace Uuid
 
             TableFromHexToBytes = (byte*) Marshal.AllocHGlobal(103).ToPointer();
             for (var i = 0; i < 103; i++)
-            {
                 TableFromHexToBytes[i] = (char) i switch
                 {
                     '0' => (byte) 0x0,
@@ -62,7 +61,6 @@ namespace Uuid
                     'F' => (byte) 0xf,
                     _ => byte.MaxValue
                 };
-            }
 
 #nullable disable
             // ReSharper disable once PossibleNullReferenceException
@@ -701,7 +699,7 @@ namespace Uuid
             output = default;
             return false;
         }
-        
+
         public static bool TryParseExact(ReadOnlySpan<char> input, ReadOnlySpan<char> format, out Uuid output)
         {
             if (format.Length != 1)
@@ -808,9 +806,7 @@ namespace Uuid
                 || uuidStringPtr[13] != '-'
                 || uuidStringPtr[18] != '-'
                 || uuidStringPtr[23] != '-')
-            {
                 return false;
-            }
 
             return TryParsePtrD(uuidStringPtr, resultPtr);
         }
@@ -831,9 +827,7 @@ namespace Uuid
                 || uuidStringPtr[14] != '-'
                 || uuidStringPtr[19] != '-'
                 || uuidStringPtr[24] != '-')
-            {
                 return false;
-            }
 
             return TryParsePtrPorB(uuidStringPtr, resultPtr);
         }
@@ -848,9 +842,7 @@ namespace Uuid
                 || uuidStringPtr[14] != '-'
                 || uuidStringPtr[19] != '-'
                 || uuidStringPtr[24] != '-')
-            {
                 return false;
-            }
 
             return TryParsePtrPorB(uuidStringPtr, resultPtr);
         }
@@ -895,9 +887,7 @@ namespace Uuid
                 || uuidStringPtr[63] != 'x'
                 || uuidStringPtr[66] != '}'
                 || uuidStringPtr[67] != '}')
-            {
                 return false;
-            }
 
             return TryParsePtrX(uuidStringPtr, resultPtr);
         }
@@ -941,79 +931,50 @@ namespace Uuid
 
         private static void ParseWithExceptionsD(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
-            if ((uint) uuidString.Length != 36u)
-            {
-                throw new FormatException("Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
-            }
+            if ((uint) uuidString.Length != 36u) throw new FormatException("Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
 
             if (uuidStringPtr[8] != '-' || uuidStringPtr[13] != '-' || uuidStringPtr[18] != '-' || uuidStringPtr[23] != '-')
-            {
                 throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
-            }
 
-            if (!TryParsePtrD(uuidStringPtr, resultPtr))
-            {
-                throw new FormatException("Uuid string should only contain hexadecimal characters.");
-            }
+            if (!TryParsePtrD(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsN(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 32u)
-            {
                 throw new FormatException(
                     "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
-            }
 
-            if (!TryParsePtrN(uuidStringPtr, resultPtr))
-            {
-                throw new FormatException("Uuid string should only contain hexadecimal characters.");
-            }
+            if (!TryParsePtrN(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsB(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 38u || uuidString[37] != '}')
-            {
                 throw new FormatException("Uuid should contain 32 digits with 4 dashes {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.");
-            }
 
             if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
-            {
                 throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
-            }
 
-            if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
-            {
-                throw new FormatException("Uuid string should only contain hexadecimal characters.");
-            }
+            if (!TryParsePtrPorB(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsP(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 38u || uuidString[37] != ')')
-            {
                 throw new FormatException("Uuid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
-            }
 
             if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
-            {
                 throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
-            }
 
-            if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
-            {
-                throw new FormatException("Uuid string should only contain hexadecimal characters.");
-            }
+            if (!TryParsePtrPorB(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsX(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 68u || uuidString[0] != '{' || uuidString[66] != '}')
-            {
                 throw new FormatException(
                     "Could not find a brace, or the length between the previous token and the brace was zero (i.e., '0x,'etc.).");
-            }
 
             if (uuidStringPtr[11] != ','
                 || uuidStringPtr[18] != ','
@@ -1025,10 +986,8 @@ namespace Uuid
                 || uuidStringPtr[51] != ','
                 || uuidStringPtr[56] != ','
                 || uuidStringPtr[61] != ',')
-            {
                 throw new FormatException(
                     "Could not find a comma, or the length between the previous token and the comma was zero (i.e., '0x,'etc.).");
-            }
 
             if (uuidStringPtr[1] != '0'
                 || uuidStringPtr[2] != 'x'
@@ -1052,19 +1011,11 @@ namespace Uuid
                 || uuidStringPtr[58] != 'x'
                 || uuidStringPtr[62] != '0'
                 || uuidStringPtr[63] != 'x')
-            {
                 throw new FormatException("Expected 0x prefix.");
-            }
 
-            if (uuidStringPtr[67] != '}')
-            {
-                throw new FormatException("Could not find the ending brace.");
-            }
+            if (uuidStringPtr[67] != '}') throw new FormatException("Could not find the ending brace.");
 
-            if (!TryParsePtrX(uuidStringPtr, resultPtr))
-            {
-                throw new FormatException("Uuid string should only contain hexadecimal characters.");
-            }
+            if (!TryParsePtrX(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static bool TryParsePtrD(char* value, byte* resultPtr)
