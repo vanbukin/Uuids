@@ -1,11 +1,8 @@
 using System;
-using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
-using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using Microsoft.VisualBasic.CompilerServices;
 
 namespace Uuid
 {
@@ -17,6 +14,11 @@ namespace Uuid
     [SuppressMessage("ReSharper", "ArrangeRedundantParentheses")]
     [SuppressMessage("ReSharper", "MemberCanBePrivate.Local")]
     [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Local")]
+    [SuppressMessage("ReSharper", "ParameterOnlyUsedForPreconditionCheck.Local")]
+    [SuppressMessage("ReSharper", "MergeSequentialChecks")]
+    [SuppressMessage("ReSharper", "RedundantDefaultMemberInitializer")]
+    [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
+    [SuppressMessage("ReSharper", "IntroduceOptionalParameters.Global")]
     public unsafe struct Uuid : IFormattable, IComparable, IComparable<Uuid>, IEquatable<Uuid>
     {
         static Uuid()
@@ -68,24 +70,10 @@ namespace Uuid
         }
 
         private const ushort MaximalChar = 103;
-
-        internal static ReadOnlySpan<byte> CharToHexLookup => new byte[]
-        {
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 15
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 31
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 47
-            0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 63
-            0xFF, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 79
-            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, // 95
-            0xFF, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf // 102
-        };
-
         private static readonly uint* TableToHex;
         private static readonly byte* TableFromHexToBytes;
         private static readonly Func<int, string> FastAllocateString;
 
-        // ReSharper disable once RedundantDefaultMemberInitializer
-        // ReSharper disable once MemberCanBePrivate.Global
         public static readonly Uuid Empty = new Uuid();
 
 
@@ -182,9 +170,6 @@ namespace Uuid
             return 0;
         }
 
-        [SuppressMessage("ReSharper", "RedundantAssignment")]
-        [SuppressMessage("ReSharper", "RedundantIfElseBlock")]
-        [SuppressMessage("ReSharper", "MergeSequentialChecks")]
         public override bool Equals(object? obj)
         {
             Uuid other;
@@ -200,9 +185,6 @@ namespace Uuid
             return _ulong0 == other._ulong0 && _ulong8 == other._ulong8;
         }
 
-        [SuppressMessage("ReSharper", "RedundantCast")]
-        [SuppressMessage("ReSharper", "ArrangeRedundantParentheses")]
-        [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
         public override int GetHashCode()
         {
             var xorULongs = _ulong0 ^ _ulong8;
@@ -211,12 +193,12 @@ namespace Uuid
 
         public static bool operator ==(Uuid left, Uuid right)
         {
-            return left.Equals(right);
+            return left._ulong0 == right._ulong0 && left._ulong8 == right._ulong8;
         }
 
         public static bool operator !=(Uuid left, Uuid right)
         {
-            return !left.Equals(right);
+            return left._ulong0 != right._ulong0 || left._ulong8 != right._ulong8;
         }
 
         public override string ToString()
@@ -224,7 +206,6 @@ namespace Uuid
             return ToString("D", null);
         }
 
-        [SuppressMessage("ReSharper", "IntroduceOptionalParameters.Global")]
         public string ToString(string? format)
         {
             return ToString(format, null);
@@ -234,10 +215,8 @@ namespace Uuid
         {
             if (string.IsNullOrEmpty(format)) format = "D";
 
-            // all acceptable format strings are of length 1
             if (format.Length != 1)
-                throw new FormatException(
-                    "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+                throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
 
             switch (format[0])
             {
@@ -245,7 +224,7 @@ namespace Uuid
                 case 'd':
                 {
                     var uuidString = FastAllocateString(36);
-                    fixed (char* uuidChars = &uuidString.GetPinnableReference())
+                    fixed (char* uuidChars = uuidString)
                     {
                         FormatD(uuidChars);
                     }
@@ -256,7 +235,7 @@ namespace Uuid
                 case 'n':
                 {
                     var uuidString = FastAllocateString(32);
-                    fixed (char* uuidChars = &uuidString.GetPinnableReference())
+                    fixed (char* uuidChars = uuidString)
                     {
                         FormatN(uuidChars);
                     }
@@ -267,7 +246,7 @@ namespace Uuid
                 case 'b':
                 {
                     var uuidString = FastAllocateString(38);
-                    fixed (char* uuidChars = &uuidString.GetPinnableReference())
+                    fixed (char* uuidChars = uuidString)
                     {
                         FormatB(uuidChars);
                     }
@@ -278,7 +257,7 @@ namespace Uuid
                 case 'p':
                 {
                     var uuidString = FastAllocateString(38);
-                    fixed (char* uuidChars = &uuidString.GetPinnableReference())
+                    fixed (char* uuidChars = uuidString)
                     {
                         FormatP(uuidChars);
                     }
@@ -289,7 +268,7 @@ namespace Uuid
                 case 'x':
                 {
                     var uuidString = FastAllocateString(68);
-                    fixed (char* uuidChars = &uuidString.GetPinnableReference())
+                    fixed (char* uuidChars = uuidString)
                     {
                         FormatX(uuidChars);
                     }
@@ -297,8 +276,7 @@ namespace Uuid
                     return uuidString;
                 }
                 default:
-                    throw new FormatException(
-                        "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+                    throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
             }
         }
 
@@ -437,51 +415,359 @@ namespace Uuid
             uintDest[29] = TableToHex[_byte14];
         }
 
-//        private enum UuidParseThrowStyle : byte
-//        {
-//            None = 0,
-//            All = 1,
-//            AllButOverflow = 2
-//        }
-//
-//        [StructLayout(LayoutKind.Explicit, Pack = 1)]
-//        private ref struct UuidResult
-//        {
-//            [FieldOffset(0)] internal Uuid _parsedUuid;
-//            [FieldOffset(16)] private readonly UuidParseThrowStyle _throwStyle;
-//
-//            internal UuidResult(UuidParseThrowStyle canThrow) : this()
-//            {
-//                _throwStyle = canThrow;
-//            }
-//
-//            internal void SetFailure(bool overflow, string failureMessage)
-//            {
-//                if (_throwStyle == UuidParseThrowStyle.None) return;
-//
-//                if (overflow)
-//                {
-//                    if (_throwStyle == UuidParseThrowStyle.All) throw new OverflowException(failureMessage);
-//
-//                    throw new FormatException("Unrecognized Uuid format.");
-//                }
-//
-//                throw new FormatException(failureMessage);
-//            }
-//        }
-
-        public Uuid(string uuidString)
+        public Uuid(string input)
         {
-            if (uuidString == null)
-                throw new ArgumentNullException(nameof(uuidString));
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
             var result = new Uuid();
             var resultPtr = (byte*) &result;
-            fixed (char* uuidStringPtr = uuidString)
+            fixed (char* uuidStringPtr = input)
             {
-                ParseWithExceptions(uuidString, uuidStringPtr, resultPtr);
+                ParseWithExceptions(input, uuidStringPtr, resultPtr);
             }
 
             this = result;
+        }
+
+        public static Uuid Parse(string input)
+        {
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            fixed (char* uuidStringPtr = input)
+            {
+                ParseWithExceptions(input, uuidStringPtr, resultPtr);
+            }
+
+            return result;
+        }
+
+        public static Uuid Parse(ReadOnlySpan<char> input)
+        {
+            if (input.IsEmpty)
+                throw new FormatException("Unrecognized Uuid format.");
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            fixed (char* uuidStringPtr = &input.GetPinnableReference())
+            {
+                ParseWithExceptions(input, uuidStringPtr, resultPtr);
+            }
+
+            return result;
+        }
+
+        public static bool TryParse(string? input, out Uuid output)
+        {
+            if (input == null)
+            {
+                output = default;
+                return false;
+            }
+
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            fixed (char* uuidStringPtr = input)
+            {
+                if (ParseWithoutExceptions(input, uuidStringPtr, resultPtr))
+                {
+                    output = result;
+                    return true;
+                }
+            }
+
+            output = default;
+            return false;
+        }
+
+        public static bool TryParse(ReadOnlySpan<char> input, out Uuid output)
+        {
+            if (input.IsEmpty)
+            {
+                output = default;
+                return false;
+            }
+
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            fixed (char* uuidStringPtr = &input.GetPinnableReference())
+            {
+                if (ParseWithoutExceptions(input, uuidStringPtr, resultPtr))
+                {
+                    output = result;
+                    return true;
+                }
+            }
+
+            output = default;
+            return false;
+        }
+
+        public static Uuid ParseExact(string input, string format)
+        {
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+            if (format == null)
+                throw new ArgumentNullException(nameof(input));
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            switch ((char) (format[0] | 0x20))
+            {
+                case 'd':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        ParseWithExceptionsD(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                case 'n':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        ParseWithExceptionsN(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                case 'b':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        ParseWithExceptionsB(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                case 'p':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        ParseWithExceptionsP(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                case 'x':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        ParseWithExceptionsP(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                default:
+                {
+                    throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+                }
+            }
+        }
+
+
+        public static Uuid ParseExact(ReadOnlySpan<char> input, ReadOnlySpan<char> format)
+        {
+            if (input.IsEmpty)
+                throw new FormatException("Unrecognized Uuid format.");
+            if (format.Length != 1)
+                throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            switch ((char) (format[0] | 0x20))
+            {
+                case 'd':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        ParseWithExceptionsD(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                case 'n':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        ParseWithExceptionsN(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                case 'b':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        ParseWithExceptionsB(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                case 'p':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        ParseWithExceptionsP(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                case 'x':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        ParseWithExceptionsP(input, uuidStringPtr, resultPtr);
+                    }
+
+                    return result;
+                }
+                default:
+                {
+                    throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+                }
+            }
+        }
+
+        public static bool TryParseExact(string? input, string? format, out Uuid output)
+        {
+            if (input == null || format?.Length != 1)
+            {
+                output = default;
+                return false;
+            }
+
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            var parsed = false;
+
+            switch ((char) (format[0] | 0x20))
+            {
+                case 'd':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        parsed = ParseWithoutExceptionsD(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+                case 'n':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        parsed = ParseWithoutExceptionsN(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+                case 'b':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        parsed = ParseWithoutExceptionsB(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+                case 'p':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        parsed = ParseWithoutExceptionsP(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+                case 'x':
+                {
+                    fixed (char* uuidStringPtr = input)
+                    {
+                        parsed = ParseWithoutExceptionsX(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+            }
+
+            if (parsed)
+            {
+                output = result;
+                return true;
+            }
+
+            output = default;
+            return false;
+        }
+        
+        public static bool TryParseExact(ReadOnlySpan<char> input, ReadOnlySpan<char> format, out Uuid output)
+        {
+            if (format.Length != 1)
+            {
+                output = default;
+                return false;
+            }
+
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            var parsed = false;
+
+            switch ((char) (format[0] | 0x20))
+            {
+                case 'd':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        parsed = ParseWithoutExceptionsD(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+                case 'n':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        parsed = ParseWithoutExceptionsN(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+                case 'b':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        parsed = ParseWithoutExceptionsB(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+                case 'p':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        parsed = ParseWithoutExceptionsP(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+                case 'x':
+                {
+                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    {
+                        parsed = ParseWithoutExceptionsX(input, uuidStringPtr, resultPtr);
+                    }
+
+                    break;
+                }
+            }
+
+            if (parsed)
+            {
+                output = result;
+                return true;
+            }
+
+            output = default;
+            return false;
         }
 
         private static bool ParseWithoutExceptions(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
@@ -490,108 +776,127 @@ namespace Uuid
                 return false;
             switch (uuidString[0])
             {
-                case '(': // P
+                case '(':
                 {
-                    if ((uint) uuidString.Length != 38u)
-                        return false;
-                    if (uuidStringPtr[37] != ')'
-                        || uuidStringPtr[9] != '-'
-                        || uuidStringPtr[14] != '-'
-                        || uuidStringPtr[19] != '-'
-                        || uuidStringPtr[24] != '-')
-                    {
-                        return false;
-                    }
-
-                    return TryParsePtrPorB(uuidStringPtr, resultPtr);
+                    return ParseWithoutExceptionsP(uuidString, uuidStringPtr, resultPtr);
                 }
                 case '{':
                 {
-                    if (uuidString.Contains('-')) // B
-                    {
-                        if ((uint) uuidString.Length != 38u)
-                            return false;
-                        if (uuidStringPtr[37] != '}'
-                            || uuidStringPtr[9] != '-'
-                            || uuidStringPtr[14] != '-'
-                            || uuidStringPtr[19] != '-'
-                            || uuidStringPtr[24] != '-')
-                        {
-                            return false;
-                        }
-
-                        return TryParsePtrPorB(uuidStringPtr, resultPtr);
-                    }
-                    else // X
-                    {
-                        if ((uint) uuidString.Length != 68u)
-                            return false;
-                        if (uuidStringPtr[0] != '{'
-                            || uuidStringPtr[1] != '0'
-                            || uuidStringPtr[2] != 'x'
-                            || uuidStringPtr[11] != ','
-                            || uuidStringPtr[12] != '0'
-                            || uuidStringPtr[13] != 'x'
-                            || uuidStringPtr[18] != ','
-                            || uuidStringPtr[19] != '0'
-                            || uuidStringPtr[20] != 'x'
-                            || uuidStringPtr[25] != ','
-                            || uuidStringPtr[27] != '0'
-                            || uuidStringPtr[28] != 'x'
-                            || uuidStringPtr[31] != ','
-                            || uuidStringPtr[32] != '0'
-                            || uuidStringPtr[33] != 'x'
-                            || uuidStringPtr[36] != ','
-                            || uuidStringPtr[37] != '0'
-                            || uuidStringPtr[38] != 'x'
-                            || uuidStringPtr[41] != ','
-                            || uuidStringPtr[42] != '0'
-                            || uuidStringPtr[43] != 'x'
-                            || uuidStringPtr[46] != ','
-                            || uuidStringPtr[47] != '0'
-                            || uuidStringPtr[48] != 'x'
-                            || uuidStringPtr[51] != ','
-                            || uuidStringPtr[52] != '0'
-                            || uuidStringPtr[53] != 'x'
-                            || uuidStringPtr[57] != '0'
-                            || uuidStringPtr[56] != ','
-                            || uuidStringPtr[58] != 'x'
-                            || uuidStringPtr[62] != '0'
-                            || uuidStringPtr[61] != ','
-                            || uuidStringPtr[63] != 'x'
-                            || uuidStringPtr[66] != '}'
-                            || uuidStringPtr[67] != '}')
-                        {
-                            return false;
-                        }
-
-                        return TryParsePtrX(uuidStringPtr, resultPtr);
-                    }
+                    return uuidString.Contains('-')
+                        ? ParseWithoutExceptionsB(uuidString, uuidStringPtr, resultPtr)
+                        : ParseWithoutExceptionsX(uuidString, uuidStringPtr, resultPtr);
                 }
                 default:
                 {
-                    if (uuidString.Contains('-')) // D
-                    {
-                        // e.g. "d85b1407-351d-4694-9392-03acc5870eb1"
-                        if ((uint) uuidString.Length != 36u)
-                            return false;
-
-                        if (uuidStringPtr[8] != '-'
-                            || uuidStringPtr[13] != '-'
-                            || uuidStringPtr[18] != '-'
-                            || uuidStringPtr[23] != '-')
-                        {
-                            return false;
-                        }
-
-                        return TryParsePtrD(uuidStringPtr, resultPtr);
-                    }
-                    else // N
-                    {
-                        return (uint) uuidString.Length == 32u && TryParsePtrN(uuidStringPtr, resultPtr);
-                    }
+                    return uuidString.Contains('-')
+                        ? ParseWithoutExceptionsD(uuidString, uuidStringPtr, resultPtr)
+                        : ParseWithoutExceptionsN(uuidString, uuidStringPtr, resultPtr);
                 }
             }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ParseWithoutExceptionsD(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length != 36u)
+                return false;
+
+            if (uuidStringPtr[8] != '-'
+                || uuidStringPtr[13] != '-'
+                || uuidStringPtr[18] != '-'
+                || uuidStringPtr[23] != '-')
+            {
+                return false;
+            }
+
+            return TryParsePtrD(uuidStringPtr, resultPtr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ParseWithoutExceptionsN(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            return (uint) uuidString.Length == 32u && TryParsePtrN(uuidStringPtr, resultPtr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ParseWithoutExceptionsB(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length != 38u)
+                return false;
+            if (uuidStringPtr[37] != '}'
+                || uuidStringPtr[9] != '-'
+                || uuidStringPtr[14] != '-'
+                || uuidStringPtr[19] != '-'
+                || uuidStringPtr[24] != '-')
+            {
+                return false;
+            }
+
+            return TryParsePtrPorB(uuidStringPtr, resultPtr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ParseWithoutExceptionsP(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length != 38u)
+                return false;
+            if (uuidStringPtr[37] != ')'
+                || uuidStringPtr[9] != '-'
+                || uuidStringPtr[14] != '-'
+                || uuidStringPtr[19] != '-'
+                || uuidStringPtr[24] != '-')
+            {
+                return false;
+            }
+
+            return TryParsePtrPorB(uuidStringPtr, resultPtr);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ParseWithoutExceptionsX(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length != 68u)
+                return false;
+            if (uuidStringPtr[0] != '{'
+                || uuidStringPtr[1] != '0'
+                || uuidStringPtr[2] != 'x'
+                || uuidStringPtr[11] != ','
+                || uuidStringPtr[12] != '0'
+                || uuidStringPtr[13] != 'x'
+                || uuidStringPtr[18] != ','
+                || uuidStringPtr[19] != '0'
+                || uuidStringPtr[20] != 'x'
+                || uuidStringPtr[25] != ','
+                || uuidStringPtr[27] != '0'
+                || uuidStringPtr[28] != 'x'
+                || uuidStringPtr[31] != ','
+                || uuidStringPtr[32] != '0'
+                || uuidStringPtr[33] != 'x'
+                || uuidStringPtr[36] != ','
+                || uuidStringPtr[37] != '0'
+                || uuidStringPtr[38] != 'x'
+                || uuidStringPtr[41] != ','
+                || uuidStringPtr[42] != '0'
+                || uuidStringPtr[43] != 'x'
+                || uuidStringPtr[46] != ','
+                || uuidStringPtr[47] != '0'
+                || uuidStringPtr[48] != 'x'
+                || uuidStringPtr[51] != ','
+                || uuidStringPtr[52] != '0'
+                || uuidStringPtr[53] != 'x'
+                || uuidStringPtr[57] != '0'
+                || uuidStringPtr[56] != ','
+                || uuidStringPtr[58] != 'x'
+                || uuidStringPtr[62] != '0'
+                || uuidStringPtr[61] != ','
+                || uuidStringPtr[63] != 'x'
+                || uuidStringPtr[66] != '}'
+                || uuidStringPtr[67] != '}')
+            {
+                return false;
+            }
+
+            return TryParsePtrX(uuidStringPtr, resultPtr);
         }
 
         private static void ParseWithExceptions(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
@@ -601,280 +906,162 @@ namespace Uuid
 
             switch (uuidString[0])
             {
-                case '(': // P
+                case '(':
                 {
-                    if ((uint) uuidString.Length != 38u || uuidString[37] != ')')
-                    {
-                        throw new FormatException("Uuid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
-                    }
-
-                    if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
-                    {
-                        throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
-                    }
-
-                    if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
-                    {
-                        throw new FormatException("Uuid string should only contain hexadecimal characters.");
-                    }
-
+                    ParseWithExceptionsP(uuidString, uuidStringPtr, resultPtr);
                     break;
                 }
                 case '{':
                 {
-                    if (uuidString.Contains('-')) // B
+                    if (uuidString.Contains('-'))
                     {
-                        if ((uint) uuidString.Length != 38u || uuidString[37] != '}')
-                        {
-                            throw new FormatException("Uuid should contain 32 digits with 4 dashes {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.");
-                        }
-
-                        if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
-                        {
-                            throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
-                        }
-
-                        if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
-                        {
-                            throw new FormatException("Uuid string should only contain hexadecimal characters.");
-                        }
-                    }
-                    else // X
-                    {
-                        if ((uint) uuidString.Length != 68u || uuidString[0] != '{' || uuidString[66] != '}')
-                        {
-                            throw new FormatException(
-                                "Could not find a brace, or the length between the previous token and the brace was zero (i.e., '0x,'etc.).");
-                        }
-
-                        if (uuidStringPtr[11] != ','
-                            || uuidStringPtr[18] != ','
-                            || uuidStringPtr[25] != ','
-                            || uuidStringPtr[31] != ','
-                            || uuidStringPtr[36] != ','
-                            || uuidStringPtr[41] != ','
-                            || uuidStringPtr[46] != ','
-                            || uuidStringPtr[51] != ','
-                            || uuidStringPtr[56] != ','
-                            || uuidStringPtr[61] != ',')
-                        {
-                            throw new FormatException(
-                                "Could not find a comma, or the length between the previous token and the comma was zero (i.e., '0x,'etc.).");
-                        }
-
-                        if (uuidStringPtr[1] != '0'
-                            || uuidStringPtr[2] != 'x'
-                            || uuidStringPtr[12] != '0'
-                            || uuidStringPtr[13] != 'x'
-                            || uuidStringPtr[19] != '0'
-                            || uuidStringPtr[20] != 'x'
-                            || uuidStringPtr[27] != '0'
-                            || uuidStringPtr[28] != 'x'
-                            || uuidStringPtr[32] != '0'
-                            || uuidStringPtr[33] != 'x'
-                            || uuidStringPtr[37] != '0'
-                            || uuidStringPtr[38] != 'x'
-                            || uuidStringPtr[42] != '0'
-                            || uuidStringPtr[43] != 'x'
-                            || uuidStringPtr[47] != '0'
-                            || uuidStringPtr[48] != 'x'
-                            || uuidStringPtr[52] != '0'
-                            || uuidStringPtr[53] != 'x'
-                            || uuidStringPtr[57] != '0'
-                            || uuidStringPtr[58] != 'x'
-                            || uuidStringPtr[62] != '0'
-                            || uuidStringPtr[63] != 'x')
-                        {
-                            throw new FormatException("Expected 0x prefix.");
-                        }
-
-                        if (uuidStringPtr[67] != '}')
-                        {
-                            throw new FormatException("Could not find the ending brace.");
-                        }
-
-                        if (!TryParsePtrX(uuidStringPtr, resultPtr))
-                        {
-                            throw new FormatException("Uuid string should only contain hexadecimal characters.");
-                        }
+                        ParseWithExceptionsB(uuidString, uuidStringPtr, resultPtr);
+                        break;
                     }
 
+                    ParseWithExceptionsX(uuidString, uuidStringPtr, resultPtr);
                     break;
                 }
                 default:
                 {
-                    if (uuidString.Contains('-')) // D
+                    if (uuidString.Contains('-'))
                     {
-                        if ((uint) uuidString.Length != 36u)
-                        {
-                            throw new FormatException("Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
-                        }
-
-                        if (uuidStringPtr[8] != '-' || uuidStringPtr[13] != '-' || uuidStringPtr[18] != '-' || uuidStringPtr[23] != '-')
-                        {
-                            throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
-                        }
-
-                        if (!TryParsePtrD(uuidStringPtr, resultPtr))
-                        {
-                            throw new FormatException("Uuid string should only contain hexadecimal characters.");
-                        }
-                    }
-                    else // N
-                    {
-                        if ((uint) uuidString.Length != 32u)
-                        {
-                            throw new FormatException(
-                                "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
-                        }
-
-                        if (!TryParsePtrN(uuidStringPtr, resultPtr))
-                        {
-                            throw new FormatException("Uuid string should only contain hexadecimal characters.");
-                        }
+                        ParseWithExceptionsD(uuidString, uuidStringPtr, resultPtr);
+                        break;
                     }
 
+                    ParseWithExceptionsN(uuidString, uuidStringPtr, resultPtr);
                     break;
                 }
             }
         }
 
-        private static bool TryParsePtrN(char* value, byte* resultPtr)
+        private static void ParseWithExceptionsD(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
-            // e.g. "d85b1407351d4694939203acc5870eb1"
-            byte hexByteHi;
-            byte hexByteLow;
-            // 0 byte
-            if (value[0] < MaximalChar
-                && (hexByteHi = TableFromHexToBytes[value[0]]) != 0xFF
-                && value[1] < MaximalChar
-                && (hexByteLow = TableFromHexToBytes[value[1]]) != 0xFF)
+            if ((uint) uuidString.Length != 36u)
             {
-                resultPtr[0] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                // 1 byte
-                if (value[2] < MaximalChar
-                    && (hexByteHi = TableFromHexToBytes[value[2]]) != 0xFF
-                    && value[3] < MaximalChar
-                    && (hexByteLow = TableFromHexToBytes[value[3]]) != 0xFF)
-                {
-                    resultPtr[1] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                    // 2 byte
-                    if (value[4] < MaximalChar
-                        && (hexByteHi = TableFromHexToBytes[value[4]]) != 0xFF
-                        && value[5] < MaximalChar
-                        && (hexByteLow = TableFromHexToBytes[value[5]]) != 0xFF)
-                    {
-                        resultPtr[2] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                        // 3 byte
-                        if (value[6] < MaximalChar
-                            && (hexByteHi = TableFromHexToBytes[value[6]]) != 0xFF
-                            && value[7] < MaximalChar
-                            && (hexByteLow = TableFromHexToBytes[value[7]]) != 0xFF)
-                        {
-                            resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                            // 4 byte
-                            if (value[8] < MaximalChar
-                                && (hexByteHi = TableFromHexToBytes[value[8]]) != 0xFF
-                                && value[9] < MaximalChar
-                                && (hexByteLow = TableFromHexToBytes[value[9]]) != 0xFF)
-                            {
-                                resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                // 5 byte
-                                if (value[10] < MaximalChar
-                                    && (hexByteHi = TableFromHexToBytes[value[10]]) != 0xFF
-                                    && value[11] < MaximalChar
-                                    && (hexByteLow = TableFromHexToBytes[value[11]]) != 0xFF)
-                                {
-                                    resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                    // 6 byte
-                                    if (value[12] < MaximalChar
-                                        && (hexByteHi = TableFromHexToBytes[value[12]]) != 0xFF
-                                        && value[13] < MaximalChar
-                                        && (hexByteLow = TableFromHexToBytes[value[13]]) != 0xFF)
-                                    {
-                                        resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                        // 7 byte
-                                        if (value[14] < MaximalChar
-                                            && (hexByteHi = TableFromHexToBytes[value[14]]) != 0xFF
-                                            && value[15] < MaximalChar
-                                            && (hexByteLow = TableFromHexToBytes[value[15]]) != 0xFF)
-                                        {
-                                            resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                            // 8 byte
-                                            if (value[16] < MaximalChar
-                                                && (hexByteHi = TableFromHexToBytes[value[16]]) != 0xFF
-                                                && value[17] < MaximalChar
-                                                && (hexByteLow = TableFromHexToBytes[value[17]]) != 0xFF)
-                                            {
-                                                resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                                // 9 byte
-                                                if (value[18] < MaximalChar
-                                                    && (hexByteHi = TableFromHexToBytes[value[18]]) != 0xFF
-                                                    && value[19] < MaximalChar
-                                                    && (hexByteLow = TableFromHexToBytes[value[19]]) != 0xFF)
-                                                {
-                                                    resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                                    // 10 byte
-                                                    if (value[20] < MaximalChar
-                                                        && (hexByteHi = TableFromHexToBytes[value[20]]) != 0xFF
-                                                        && value[21] < MaximalChar
-                                                        && (hexByteLow = TableFromHexToBytes[value[21]]) != 0xFF)
-                                                    {
-                                                        resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                                        // 11 byte
-                                                        if (value[22] < MaximalChar
-                                                            && (hexByteHi = TableFromHexToBytes[value[22]]) != 0xFF
-                                                            && value[23] < MaximalChar
-                                                            && (hexByteLow = TableFromHexToBytes[value[23]]) != 0xFF)
-                                                        {
-                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                                            // 12 byte
-                                                            if (value[24] < MaximalChar
-                                                                && (hexByteHi = TableFromHexToBytes[value[24]]) != 0xFF
-                                                                && value[25] < MaximalChar
-                                                                && (hexByteLow = TableFromHexToBytes[value[25]]) != 0xFF)
-                                                            {
-                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                                                // 13 byte
-                                                                if (value[26] < MaximalChar
-                                                                    && (hexByteHi = TableFromHexToBytes[value[26]]) != 0xFF
-                                                                    && value[27] < MaximalChar
-                                                                    && (hexByteLow = TableFromHexToBytes[value[27]]) != 0xFF)
-                                                                {
-                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                                                    // 14 byte
-                                                                    if (value[28] < MaximalChar
-                                                                        && (hexByteHi = TableFromHexToBytes[value[28]]) != 0xFF
-                                                                        && value[29] < MaximalChar
-                                                                        && (hexByteLow = TableFromHexToBytes[value[29]]) != 0xFF)
-                                                                    {
-                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                                                        // 15 byte
-                                                                        if (value[30] < MaximalChar
-                                                                            && (hexByteHi = TableFromHexToBytes[value[30]]) != 0xFF
-                                                                            && value[31] < MaximalChar
-                                                                            && (hexByteLow = TableFromHexToBytes[value[31]]) != 0xFF)
-                                                                        {
-                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-                                                                            return true;
-                                                                        }
-                                                                    }
-                                                                }
-                                                            }
-                                                        }
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
+                throw new FormatException("Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
             }
 
-            return false;
+            if (uuidStringPtr[8] != '-' || uuidStringPtr[13] != '-' || uuidStringPtr[18] != '-' || uuidStringPtr[23] != '-')
+            {
+                throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
+            }
+
+            if (!TryParsePtrD(uuidStringPtr, resultPtr))
+            {
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            }
+        }
+
+        private static void ParseWithExceptionsN(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length != 32u)
+            {
+                throw new FormatException(
+                    "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
+            }
+
+            if (!TryParsePtrN(uuidStringPtr, resultPtr))
+            {
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            }
+        }
+
+        private static void ParseWithExceptionsB(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length != 38u || uuidString[37] != '}')
+            {
+                throw new FormatException("Uuid should contain 32 digits with 4 dashes {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.");
+            }
+
+            if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
+            {
+                throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
+            }
+
+            if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
+            {
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            }
+        }
+
+        private static void ParseWithExceptionsP(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length != 38u || uuidString[37] != ')')
+            {
+                throw new FormatException("Uuid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
+            }
+
+            if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
+            {
+                throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
+            }
+
+            if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
+            {
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            }
+        }
+
+        private static void ParseWithExceptionsX(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length != 68u || uuidString[0] != '{' || uuidString[66] != '}')
+            {
+                throw new FormatException(
+                    "Could not find a brace, or the length between the previous token and the brace was zero (i.e., '0x,'etc.).");
+            }
+
+            if (uuidStringPtr[11] != ','
+                || uuidStringPtr[18] != ','
+                || uuidStringPtr[25] != ','
+                || uuidStringPtr[31] != ','
+                || uuidStringPtr[36] != ','
+                || uuidStringPtr[41] != ','
+                || uuidStringPtr[46] != ','
+                || uuidStringPtr[51] != ','
+                || uuidStringPtr[56] != ','
+                || uuidStringPtr[61] != ',')
+            {
+                throw new FormatException(
+                    "Could not find a comma, or the length between the previous token and the comma was zero (i.e., '0x,'etc.).");
+            }
+
+            if (uuidStringPtr[1] != '0'
+                || uuidStringPtr[2] != 'x'
+                || uuidStringPtr[12] != '0'
+                || uuidStringPtr[13] != 'x'
+                || uuidStringPtr[19] != '0'
+                || uuidStringPtr[20] != 'x'
+                || uuidStringPtr[27] != '0'
+                || uuidStringPtr[28] != 'x'
+                || uuidStringPtr[32] != '0'
+                || uuidStringPtr[33] != 'x'
+                || uuidStringPtr[37] != '0'
+                || uuidStringPtr[38] != 'x'
+                || uuidStringPtr[42] != '0'
+                || uuidStringPtr[43] != 'x'
+                || uuidStringPtr[47] != '0'
+                || uuidStringPtr[48] != 'x'
+                || uuidStringPtr[52] != '0'
+                || uuidStringPtr[53] != 'x'
+                || uuidStringPtr[57] != '0'
+                || uuidStringPtr[58] != 'x'
+                || uuidStringPtr[62] != '0'
+                || uuidStringPtr[63] != 'x')
+            {
+                throw new FormatException("Expected 0x prefix.");
+            }
+
+            if (uuidStringPtr[67] != '}')
+            {
+                throw new FormatException("Could not find the ending brace.");
+            }
+
+            if (!TryParsePtrX(uuidStringPtr, resultPtr))
+            {
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            }
         }
 
         private static bool TryParsePtrD(char* value, byte* resultPtr)
@@ -1004,6 +1191,144 @@ namespace Uuid
                                                                             && (hexByteHi = TableFromHexToBytes[value[34]]) != 0xFF
                                                                             && value[35] < MaximalChar
                                                                             && (hexByteLow = TableFromHexToBytes[value[35]]) != 0xFF)
+                                                                        {
+                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                            return true;
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool TryParsePtrN(char* value, byte* resultPtr)
+        {
+            // e.g. "d85b1407351d4694939203acc5870eb1"
+            byte hexByteHi;
+            byte hexByteLow;
+            // 0 byte
+            if (value[0] < MaximalChar
+                && (hexByteHi = TableFromHexToBytes[value[0]]) != 0xFF
+                && value[1] < MaximalChar
+                && (hexByteLow = TableFromHexToBytes[value[1]]) != 0xFF)
+            {
+                resultPtr[0] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                // 1 byte
+                if (value[2] < MaximalChar
+                    && (hexByteHi = TableFromHexToBytes[value[2]]) != 0xFF
+                    && value[3] < MaximalChar
+                    && (hexByteLow = TableFromHexToBytes[value[3]]) != 0xFF)
+                {
+                    resultPtr[1] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                    // 2 byte
+                    if (value[4] < MaximalChar
+                        && (hexByteHi = TableFromHexToBytes[value[4]]) != 0xFF
+                        && value[5] < MaximalChar
+                        && (hexByteLow = TableFromHexToBytes[value[5]]) != 0xFF)
+                    {
+                        resultPtr[2] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                        // 3 byte
+                        if (value[6] < MaximalChar
+                            && (hexByteHi = TableFromHexToBytes[value[6]]) != 0xFF
+                            && value[7] < MaximalChar
+                            && (hexByteLow = TableFromHexToBytes[value[7]]) != 0xFF)
+                        {
+                            resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                            // 4 byte
+                            if (value[8] < MaximalChar
+                                && (hexByteHi = TableFromHexToBytes[value[8]]) != 0xFF
+                                && value[9] < MaximalChar
+                                && (hexByteLow = TableFromHexToBytes[value[9]]) != 0xFF)
+                            {
+                                resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                // 5 byte
+                                if (value[10] < MaximalChar
+                                    && (hexByteHi = TableFromHexToBytes[value[10]]) != 0xFF
+                                    && value[11] < MaximalChar
+                                    && (hexByteLow = TableFromHexToBytes[value[11]]) != 0xFF)
+                                {
+                                    resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                    // 6 byte
+                                    if (value[12] < MaximalChar
+                                        && (hexByteHi = TableFromHexToBytes[value[12]]) != 0xFF
+                                        && value[13] < MaximalChar
+                                        && (hexByteLow = TableFromHexToBytes[value[13]]) != 0xFF)
+                                    {
+                                        resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                        // 7 byte
+                                        if (value[14] < MaximalChar
+                                            && (hexByteHi = TableFromHexToBytes[value[14]]) != 0xFF
+                                            && value[15] < MaximalChar
+                                            && (hexByteLow = TableFromHexToBytes[value[15]]) != 0xFF)
+                                        {
+                                            resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                            // 8 byte
+                                            if (value[16] < MaximalChar
+                                                && (hexByteHi = TableFromHexToBytes[value[16]]) != 0xFF
+                                                && value[17] < MaximalChar
+                                                && (hexByteLow = TableFromHexToBytes[value[17]]) != 0xFF)
+                                            {
+                                                resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                // 9 byte
+                                                if (value[18] < MaximalChar
+                                                    && (hexByteHi = TableFromHexToBytes[value[18]]) != 0xFF
+                                                    && value[19] < MaximalChar
+                                                    && (hexByteLow = TableFromHexToBytes[value[19]]) != 0xFF)
+                                                {
+                                                    resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                    // 10 byte
+                                                    if (value[20] < MaximalChar
+                                                        && (hexByteHi = TableFromHexToBytes[value[20]]) != 0xFF
+                                                        && value[21] < MaximalChar
+                                                        && (hexByteLow = TableFromHexToBytes[value[21]]) != 0xFF)
+                                                    {
+                                                        resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                        // 11 byte
+                                                        if (value[22] < MaximalChar
+                                                            && (hexByteHi = TableFromHexToBytes[value[22]]) != 0xFF
+                                                            && value[23] < MaximalChar
+                                                            && (hexByteLow = TableFromHexToBytes[value[23]]) != 0xFF)
+                                                        {
+                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                            // 12 byte
+                                                            if (value[24] < MaximalChar
+                                                                && (hexByteHi = TableFromHexToBytes[value[24]]) != 0xFF
+                                                                && value[25] < MaximalChar
+                                                                && (hexByteLow = TableFromHexToBytes[value[25]]) != 0xFF)
+                                                            {
+                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                // 13 byte
+                                                                if (value[26] < MaximalChar
+                                                                    && (hexByteHi = TableFromHexToBytes[value[26]]) != 0xFF
+                                                                    && value[27] < MaximalChar
+                                                                    && (hexByteLow = TableFromHexToBytes[value[27]]) != 0xFF)
+                                                                {
+                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                    // 14 byte
+                                                                    if (value[28] < MaximalChar
+                                                                        && (hexByteHi = TableFromHexToBytes[value[28]]) != 0xFF
+                                                                        && value[29] < MaximalChar
+                                                                        && (hexByteLow = TableFromHexToBytes[value[29]]) != 0xFF)
+                                                                    {
+                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                        // 15 byte
+                                                                        if (value[30] < MaximalChar
+                                                                            && (hexByteHi = TableFromHexToBytes[value[30]]) != 0xFF
+                                                                            && value[31] < MaximalChar
+                                                                            && (hexByteLow = TableFromHexToBytes[value[31]]) != 0xFF)
                                                                         {
                                                                             resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                                             return true;
@@ -1371,700 +1696,5 @@ namespace Uuid
 
             return false;
         }
-
-        public static Uuid Parse(string input)
-        {
-            if (input == null)
-                throw new ArgumentNullException(nameof(input));
-            var result = new Uuid();
-            var resultPtr = (byte*) &result;
-            fixed (char* uuidStringPtr = input)
-            {
-                ParseWithExceptions(input, uuidStringPtr, resultPtr);
-            }
-
-            return result;
-        }
-
-        public static Uuid Parse(ReadOnlySpan<char> input)
-        {
-            if (input.IsEmpty || (uint) input.Length > 68)
-                throw new FormatException("Unrecognized Uuid format.");
-            var inputPtr = stackalloc char[input.Length];
-            for (var i = 0; i < input.Length; i++)
-            {
-                inputPtr[i] = input[i];
-            }
-
-            var result = new Uuid();
-            var resultPtr = (byte*) &result;
-            var span = new ReadOnlySpan<char>(inputPtr, input.Length);
-            ParseWithExceptions(span, inputPtr, resultPtr);
-            return result;
-        }
-
-        public static bool TryParse(string? input, out Uuid output)
-        {
-            if (input == null)
-            {
-                output = default;
-                return false;
-            }
-
-            var result = new Uuid();
-            var resultPtr = (byte*) &result;
-            fixed (char* uuidStringPtr = input)
-            {
-                if (ParseWithoutExceptions(input, uuidStringPtr, resultPtr))
-                {
-                    output = result;
-                    return true;
-                }
-            }
-
-            output = default;
-            return false;
-        }
-
-        public static bool TryParse(ReadOnlySpan<char> input, out Uuid output)
-        {
-            if (input.IsEmpty || (uint) input.Length > 68)
-            {
-                output = default;
-                return false;
-            }
-
-            var inputPtr = stackalloc char[input.Length];
-            for (var i = 0; i < input.Length; i++)
-            {
-                inputPtr[i] = input[i];
-            }
-
-            var result = new Uuid();
-            var resultPtr = (byte*) &result;
-            var span = new ReadOnlySpan<char>(inputPtr, input.Length);
-            if (ParseWithoutExceptions(span, inputPtr, resultPtr))
-            {
-                output = result;
-                return true;
-            }
-
-            output = default;
-            return false;
-        }
-
-//----------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-//        public static bool TryParse(string? input, out Uuid result)
-//        {
-//            if (input == null)
-//            {
-//                result = default;
-//                return false;
-//            }
-//
-//            return TryParse((ReadOnlySpan<char>) input, out result);
-//        }
-//
-//        public static bool TryParse(ReadOnlySpan<char> input, out Uuid result)
-//        {
-//            var parseResult = new UuidResult(UuidParseThrowStyle.None);
-//            if (TryParseUuid(input, ref parseResult))
-//            {
-//                result = parseResult._parsedUuid;
-//                return true;
-//            }
-//            else
-//            {
-//                result = default;
-//                return false;
-//            }
-//        }
-//
-//        public static Uuid ParseExact(string input, string format)
-//        {
-//            return ParseExact(
-//                input != null ? (ReadOnlySpan<char>) input : throw new ArgumentNullException(nameof(input)),
-//                format != null ? (ReadOnlySpan<char>) format : throw new ArgumentNullException(nameof(format)));
-//        }
-//
-//        public static Uuid ParseExact(ReadOnlySpan<char> input, ReadOnlySpan<char> format)
-//        {
-//            if (format.Length != 1)
-//                // all acceptable format strings are of length 1
-//                throw new FormatException(
-//                    "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
-//
-//            input = input.Trim();
-//
-//            var result = new UuidResult(UuidParseThrowStyle.AllButOverflow);
-//            // ReSharper disable once UnusedVariable
-//            var success = (char) (format[0] | 0x20) switch
-//            {
-//                'd' => TryParseExactD(input, ref result),
-//                'n' => TryParseExactN(input, ref result),
-//                'b' => TryParseExactB(input, ref result),
-//                'p' => TryParseExactP(input, ref result),
-//                'x' => TryParseExactX(input, ref result),
-//                _ => throw new FormatException(
-//                    "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\"."),
-//            };
-//            return Unsafe.Read<Uuid>(&result._parsedUuid);
-//        }
-//
-//        public static bool TryParseExact(string? input, string? format, out Uuid result)
-//        {
-//            if (input == null)
-//            {
-//                result = default;
-//                return false;
-//            }
-//
-//            return TryParseExact((ReadOnlySpan<char>) input, format, out result);
-//        }
-//
-//        [SuppressMessage("ReSharper", "RedundantIfElseBlock")]
-//        public static bool TryParseExact(ReadOnlySpan<char> input, ReadOnlySpan<char> format, out Uuid result)
-//        {
-//            if (format.Length != 1)
-//            {
-//                result = default;
-//                return false;
-//            }
-//
-//            input = input.Trim();
-//
-//            var parseResult = new UuidResult(UuidParseThrowStyle.None);
-//            var success = (char) (format[0] | 0x20) switch
-//            {
-//                'd' => TryParseExactD(input, ref parseResult),
-//                'n' => TryParseExactN(input, ref parseResult),
-//                'b' => TryParseExactB(input, ref parseResult),
-//                'p' => TryParseExactP(input, ref parseResult),
-//                'x' => TryParseExactX(input, ref parseResult),
-//                _ => false
-//            };
-//
-//            if (success)
-//            {
-//                result = Unsafe.Read<Uuid>(&parseResult._parsedUuid);
-//                return true;
-//            }
-//            else
-//            {
-//                result = default;
-//                return false;
-//            }
-//        }
-
-
-//----------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-//----------------------------------------------------------------------------------------------------------
-
-//        private static bool TryParseUuid(ReadOnlySpan<char> uuidString, ref UuidResult result)
-//        {
-//            uuidString = uuidString.Trim(); // Remove whitespace from beginning and end
-//
-//            if (uuidString.Length == 0)
-//            {
-//                result.SetFailure(false, "Unrecognized Uuid format.");
-//                return false;
-//            }
-//
-//            return uuidString[0] switch
-//            {
-//                '(' => TryParseExactP(uuidString, ref result),
-//                '{' => uuidString.Contains('-')
-//                    ? TryParseExactB(uuidString, ref result)
-//                    : TryParseExactX(uuidString, ref result),
-//                _ => uuidString.Contains('-')
-//                    ? TryParseExactD(uuidString, ref result)
-//                    : TryParseExactN(uuidString, ref result),
-//            };
-//        }
-//
-//        private static bool TryParseExactB(ReadOnlySpan<char> uuidString, ref UuidResult result)
-//        {
-//            // e.g. "{d85b1407-351d-4694-9392-03acc5870eb1}"
-//
-//            if ((uint) uuidString.Length != 38 || uuidString[0] != '{' || uuidString[37] != '}')
-//            {
-//                result.SetFailure(false,
-//                    "Uuid should contain 32 digits with 4 dashes {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.");
-//                return false;
-//            }
-//
-//            return TryParseExactD(uuidString.Slice(1, 36), ref result);
-//        }
-//
-//        private static bool TryParseExactD(ReadOnlySpan<char> uuidString, ref UuidResult result)
-//        {
-//            // e.g. "d85b1407-351d-4694-9392-03acc5870eb1"
-//
-//            if ((uint) uuidString.Length != 36)
-//            {
-//                result.SetFailure(false,
-//                    "Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
-//                return false;
-//            }
-//
-//            if (uuidString[8] != '-' || uuidString[13] != '-' || uuidString[18] != '-' || uuidString[23] != '-')
-//            {
-//                result.SetFailure(false, "Dashes are in the wrong position for Uuid parsing.");
-//                return false;
-//            }
-//
-//            ref var parsedUuid = ref result._parsedUuid;
-//
-//            if (TryParseHex(uuidString.Slice(0, 8), out parsedUuid._uint0)
-//                && TryParseHex(uuidString.Slice(9, 4), out parsedUuid._ushort4)
-//                && TryParseHex(uuidString.Slice(14, 4), out parsedUuid._ushort6)
-//                && TryParseHex(uuidString.Slice(19, 4), out parsedUuid._ushort8)
-//                && TryParseHex(uuidString.Slice(24, 4), out parsedUuid._ushort10)
-//                && (TryParseHexToUint32(uuidString.Slice(28, 8), out parsedUuid._uint12)))
-//            {
-//                return true;
-//            }
-//
-//            result.SetFailure(false, "Uuid string should only contain hexadecimal characters.");
-//            return false;
-//        }
-//
-//
-//        private static bool TryParseExactN(ReadOnlySpan<char> uuidString, ref UuidResult result)
-//        {
-//            // e.g. "d85b1407351d4694939203acc5870eb1"
-//
-//            if ((uint) uuidString.Length != 32)
-//            {
-//                result.SetFailure(false, "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
-//                return false;
-//            }
-//
-//
-//            if (TryDirectParseHexToUuid(uuidString, out result._parsedUuid))
-//            {
-//                return true;
-//            }
-//
-//            result.SetFailure(false, "Uuid string should only contain hexadecimal characters.");
-//            return false;
-//        }
-//
-//        private static bool TryParseExactP(ReadOnlySpan<char> uuidString, ref UuidResult result)
-//        {
-//            // e.g. "(d85b1407-351d-4694-9392-03acc5870eb1)"
-//
-//            if ((uint) uuidString.Length != 38 || uuidString[0] != '(' || uuidString[37] != ')')
-//            {
-//                result.SetFailure(false,
-//                    "Uuid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
-//                return false;
-//            }
-//
-//            return TryParseExactD(uuidString.Slice(1, 36), ref result);
-//        }
-//
-//        private static bool TryParseExactX(ReadOnlySpan<char> uuidString, ref UuidResult result)
-//        {
-//            // e.g. "{0xd85b1407,0x351d,0x4694,{0x93,0x92,0x03,0xac,0xc5,0x87,0x0e,0xb1}}"
-//
-//            uuidString = EatAllWhitespace(uuidString);
-//
-//            // Check for leading '{'
-//            if ((uint) uuidString.Length == 0 || uuidString[0] != '{')
-//            {
-//                result.SetFailure(
-//                    false,
-//                    "Could not find a brace, or the length between the previous token and the brace was zero (i.e., '0x,'etc.).");
-//                return false;
-//            }
-//
-//            // Check for '0x'
-//            if (!IsHexPrefix(uuidString, 1))
-//            {
-//                result.SetFailure(false, "Expected 0x prefix.");
-//                return false;
-//            }
-//
-//            // Find the end of this hex number (since it is not fixed length)
-//            var numStart = 3;
-//            var numLen = uuidString.Slice(numStart).IndexOf(',');
-//            if (numLen <= 0)
-//            {
-//                result.SetFailure(
-//                    false,
-//                    "Could not find a comma, or the length between the previous token and the comma was zero (i.e., '0x,'etc.).");
-//                return false;
-//            }
-//
-//
-//            var overflow = false;
-//            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._uint0, ref overflow) ||
-//                overflow)
-//            {
-//                result.SetFailure(overflow, overflow
-//                    ? "Value was either too large or too small for a UInt32."
-//                    : "Uuid string should only contain hexadecimal characters.");
-//                return false;
-//            }
-//
-//            // Check for '0x'
-//            if (!IsHexPrefix(uuidString, numStart + numLen + 1))
-//            {
-//                result.SetFailure(false, "Expected 0x prefix.");
-//                return false;
-//            }
-//
-//            // +3 to get by ',0x'
-//            numStart = numStart + numLen + 3;
-//            numLen = uuidString.Slice(numStart).IndexOf(',');
-//            if (numLen <= 0)
-//            {
-//                result.SetFailure(false,
-//                    "Could not find a comma, or the length between the previous token and the comma was zero (i.e., '0x,'etc.).");
-//                return false;
-//            }
-//
-//            // Read in the number
-//            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._ushort4, ref overflow) ||
-//                overflow)
-//            {
-//                result.SetFailure(overflow, overflow
-//                    ? "Value was either too large or too small for a UInt16."
-//                    : "Uuid string should only contain hexadecimal characters.");
-//                return false;
-//            }
-//
-//            // Check for '0x'
-//            if (!IsHexPrefix(uuidString, numStart + numLen + 1))
-//            {
-//                result.SetFailure(false, "Expected 0x prefix.");
-//                return false;
-//            }
-//
-//            // +3 to get by ',0x'
-//            numStart = numStart + numLen + 3;
-//            numLen = uuidString.Slice(numStart).IndexOf(',');
-//            if (numLen <= 0)
-//            {
-//                result.SetFailure(false,
-//                    "Could not find a comma, or the length between the previous token and the comma was zero (i.e., '0x,'etc.).");
-//                return false;
-//            }
-//
-//            // Read in the number
-//            if (!TryParseHex(uuidString.Slice(numStart, numLen), out result._parsedUuid._ushort6, ref overflow) ||
-//                overflow)
-//            {
-//                result.SetFailure(overflow,
-//                    overflow
-//                        ? "Value was either too large or too small for a UInt16."
-//                        : "Uuid string should only contain hexadecimal characters.");
-//                return false;
-//            }
-//
-//            // Check for '{'
-//            if ((uint) uuidString.Length <= (uint) (numStart + numLen + 1) || uuidString[numStart + numLen + 1] != '{')
-//            {
-//                result.SetFailure(false, "Expected {0xdddddddd, etc}.");
-//                return false;
-//            }
-//
-//            // Prepare for loop
-//            numLen++;
-//            for (var i = 0; i < 8; i++)
-//            {
-//                // Check for '0x'
-//                if (!IsHexPrefix(uuidString, numStart + numLen + 1))
-//                {
-//                    result.SetFailure(false, "Expected 0x prefix.");
-//                    return false;
-//                }
-//
-//                // +3 to get by ',0x' or '{0x' for first case
-//                numStart = numStart + numLen + 3;
-//
-//                // Calculate number length
-//                if (i < 7) // first 7 cases
-//                {
-//                    numLen = uuidString.Slice(numStart).IndexOf(',');
-//                    if (numLen <= 0)
-//                    {
-//                        result.SetFailure(false,
-//                            "Could not find a comma, or the length between the previous token and the comma was zero (i.e., '0x,'etc.).");
-//                        return false;
-//                    }
-//                }
-//                else // last case ends with '}', not ','
-//                {
-//                    numLen = uuidString.Slice(numStart).IndexOf('}');
-//                    if (numLen <= 0)
-//                    {
-//                        result.SetFailure(false,
-//                            "Could not find a brace, or the length between the previous token and the brace was zero (i.e., '0x,'etc.).");
-//                        return false;
-//                    }
-//                }
-//
-//                // Read in the number
-//                if (!TryParseHex(uuidString.Slice(numStart, numLen), out byte byteVal, ref overflow) || overflow)
-//                {
-//                    // The previous implementation had some odd inconsistencies, which are carried forward here.
-//                    // The byte values in the X format are treated as integers with regards to overflow, so
-//                    // a "byte" value like 0xddd in Uuid's ctor results in a FormatException but 0xddddddddd results
-//                    // in OverflowException.
-//                    result.SetFailure(overflow,
-//                        overflow
-//                            ? "Value was either too large or too small for an unsigned byte."
-//                            : "Uuid string should only contain hexadecimal characters.");
-//                    return false;
-//                }
-//
-//                Unsafe.Add(ref result._parsedUuid._byte8, i) = byteVal;
-//            }
-//
-//            // Check for last '}'
-//            if (numStart + numLen + 1 >= uuidString.Length || uuidString[numStart + numLen + 1] != '}')
-//            {
-//                result.SetFailure(false, "Could not find the ending brace.");
-//                return false;
-//            }
-//
-//            // Check if we have extra characters at the end
-//            if (numStart + numLen + 1 != uuidString.Length - 1)
-//            {
-//                result.SetFailure(false, "Additional non-parsable characters are at the end of the string.");
-//                return false;
-//            }
-//
-//            return true;
-//        }
-//
-//        private static bool TryDirectParseHexToUuid(ReadOnlySpan<char> value, out Uuid result)
-//        {
-//            var parsedUuid = new Uuid();
-//            var parsedUuidPtr = (byte*) &parsedUuid;
-//
-//            for (var i = 0; i < 16; i++)
-//            {
-//                byte hexByteHi;
-//                byte hexByteLow;
-//                if ((hexByteHi = TableFromHexToBytes[value[i * 2]]) != 0xFF
-//                    && (hexByteLow = TableFromHexToBytes[value[i * 2 + 1]]) != 0xFF)
-//                {
-//                    unchecked
-//                    {
-//                        parsedUuidPtr[i] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-//                    }
-//                }
-//                else
-//                {
-//                    result = new Uuid();
-//                    return false;
-//                }
-//            }
-//
-//            result = parsedUuid;
-//            return true;
-//        }
-//
-//        private static bool TryParseHexToUint32(ReadOnlySpan<char> value, out uint result)
-//        {
-//            result = 0u;
-//            if (value.IsEmpty || (uint) value.Length != 8)
-//            {
-//                return false;
-//            }
-//
-//            var parsedData = 0u;
-//            for (var i = 0; i < 4; i++)
-//            {
-//                byte hexByteHi;
-//                byte hexByteLow;
-//                if ((hexByteHi = TableFromHexToBytes[value[i * 2]]) != 0xFF
-//                    && (hexByteLow = TableFromHexToBytes[value[i * 2 + 1]]) != 0xFF)
-//                {
-//                    var hexByte = (uint) ((hexByteHi << 4) | hexByteLow) << (i * 8);
-//                    parsedData |= hexByte;
-//                }
-//                else
-//                {
-//                    return false;
-//                }
-//            }
-//
-//            result = parsedData;
-//            return true;
-//        }
-//
-//        private static bool TryParseHex(ReadOnlySpan<char> uuidString, out ushort result)
-//        {
-//            var overflowIgnored = false;
-//            return TryParseHex(uuidString, out result, ref overflowIgnored);
-//        }
-//
-//        private static bool TryParseHex(ReadOnlySpan<char> uuidString, out uint result)
-//        {
-//            var overflowIgnored = false;
-//            return TryParseHex(uuidString, out result, ref overflowIgnored);
-//        }
-//
-//        private static bool TryParseHex(ReadOnlySpan<char> uuidString, out byte result, ref bool overflow)
-//        {
-//            if ((uint) uuidString.Length > 0)
-//            {
-//                if (uuidString[0] == '+') uuidString = uuidString.Slice(1);
-//
-//                if ((uint) uuidString.Length > 1 && uuidString[0] == '0' && (uuidString[1] | 0x20) == 'x')
-//                    uuidString = uuidString.Slice(2);
-//            }
-//
-//            // Skip past leading 0s.
-//            var i = 0;
-//            for (; i < uuidString.Length && uuidString[i] == '0'; i++)
-//            {
-//            }
-//
-//            var processedDigits = 0;
-//            byte tmp = 0;
-//            for (; i < uuidString.Length; i++)
-//            {
-//                int numValue;
-//                var currentChar = uuidString[i];
-//                if (currentChar >= (uint) CharToHexLookup.Length || (numValue = CharToHexLookup[currentChar]) == 0xFF)
-//                {
-//                    if (processedDigits > 2) overflow = true;
-//                    result = 0;
-//                    return false;
-//                }
-//
-//                tmp = (byte) ((tmp * 16) + (uint) numValue);
-//                processedDigits++;
-//            }
-//
-//            if (processedDigits > 2) overflow = true;
-//            result = BinaryPrimitives.ReverseEndianness(tmp);
-//            return true;
-//        }
-//
-//        private static bool TryParseHex(ReadOnlySpan<char> uuidString, out ushort result, ref bool overflow)
-//        {
-//            if ((uint) uuidString.Length > 0)
-//            {
-//                if (uuidString[0] == '+') uuidString = uuidString.Slice(1);
-//
-//                if ((uint) uuidString.Length > 1 && uuidString[0] == '0' && (uuidString[1] | 0x20) == 'x')
-//                    uuidString = uuidString.Slice(2);
-//            }
-//
-//            // Skip past leading 0s.
-//            var i = 0;
-//            for (; i < uuidString.Length && uuidString[i] == '0'; i++)
-//            {
-//            }
-//
-//            var processedDigits = 0;
-//            ushort tmp = 0;
-//            for (; i < uuidString.Length; i++)
-//            {
-//                int numValue;
-//                var currentChar = uuidString[i];
-//                if (currentChar >= (uint) CharToHexLookup.Length || (numValue = CharToHexLookup[currentChar]) == 0xFF)
-//                {
-//                    if (processedDigits > 4) overflow = true;
-//                    result = 0;
-//                    return false;
-//                }
-//
-//                tmp = (ushort) ((tmp * 16) + (uint) numValue);
-//                processedDigits++;
-//            }
-//
-//            if (processedDigits > 4) overflow = true;
-//            result = BinaryPrimitives.ReverseEndianness(tmp);
-//            return true;
-//        }
-//
-//        private static bool TryParseHex(ReadOnlySpan<char> uuidString, out uint result, ref bool overflow)
-//        {
-//            if ((uint) uuidString.Length > 0)
-//            {
-//                if (uuidString[0] == '+') uuidString = uuidString.Slice(1);
-//
-//                if ((uint) uuidString.Length > 1 && uuidString[0] == '0' && (uuidString[1] | 0x20) == 'x')
-//                    uuidString = uuidString.Slice(2);
-//            }
-//
-//            // Skip past leading 0s.
-//            var i = 0;
-//            for (; i < uuidString.Length && uuidString[i] == '0'; i++)
-//            {
-//            }
-//
-//            var processedDigits = 0;
-//            uint tmp = 0;
-//            for (; i < uuidString.Length; i++)
-//            {
-//                int numValue;
-//                var currentChar = uuidString[i];
-//                if (currentChar >= (uint) CharToHexLookup.Length || (numValue = CharToHexLookup[currentChar]) == 0xFF)
-//                {
-//                    if (processedDigits > 8) overflow = true;
-//                    result = 0;
-//                    return false;
-//                }
-//
-//                tmp = (tmp * 16) + (uint) numValue;
-//                processedDigits++;
-//            }
-//
-//            if (processedDigits > 8) overflow = true;
-//            result = BinaryPrimitives.ReverseEndianness(tmp);
-//            return true;
-//        }
-//
-//        private static ReadOnlySpan<char> EatAllWhitespace(ReadOnlySpan<char> str)
-//        {
-//            // Find the first whitespace character.  If there is none, just return the input.
-//            int i;
-//            for (i = 0; i < str.Length && !char.IsWhiteSpace(str[i]); i++)
-//            {
-//            }
-//
-//            if (i == str.Length) return str;
-//
-//            // There was at least one whitespace.  Copy over everything prior to it to a new array.
-//            var chArr = new char[str.Length];
-//            var newLength = 0;
-//            if (i > 0)
-//            {
-//                newLength = i;
-//                str.Slice(0, i).CopyTo(chArr);
-//            }
-//
-//            // Loop through the remaining chars, copying over non-whitespace.
-//            for (; i < str.Length; i++)
-//            {
-//                var c = str[i];
-//                if (!char.IsWhiteSpace(c)) chArr[newLength++] = c;
-//            }
-//
-//            // Return the string with the whitespace removed.
-//            return new ReadOnlySpan<char>(chArr, 0, newLength);
-//        }
-//
-//        private static bool IsHexPrefix(ReadOnlySpan<char> str, int i)
-//        {
-//            return i + 1 < str.Length &&
-//                   str[i] == '0' &&
-//                   (str[i + 1] | 0x20) == 'x';
-//        }
     }
 }

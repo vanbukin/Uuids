@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Buffers.Binary;
-using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.Linq;
-using System.Reflection;
 using System.Runtime.InteropServices;
-using Microsoft.VisualBasic.CompilerServices;
 
 namespace ConsoleApp1
 {
@@ -89,20 +85,51 @@ namespace ConsoleApp1
             return result;
         }
 
+        private static void GenerateGarbage()
+        {
+            for (int i = 0; i < 1_000_000; i++)
+            {
+                var str = i.ToString();
+            }
+        }
+
+        private static void Do(ReadOnlySpan<char> chars)
+        {
+            fixed (char* ptr = &chars.GetPinnableReference())
+            {
+                DoPtr(ptr, chars.Length);
+            }
+        }
+
+        private static void DoPtr(char* ptr, int length)
+        {
+            GenerateGarbage();
+            var spanExternal = new Span<char>(ptr, length);
+            for (var i = 0; i < length; i++)
+            {
+                if (i % 10 == 0)
+                {
+                    GenerateGarbage();
+                    var spanBefore = new Span<char>(ptr, length);
+                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+                    var spanAfter = new Span<char>(ptr, length);
+                    var xx = 0;
+                }
+            }
+
+            var tt = 0;
+        }
 
         public static unsafe void Main(string[] args)
         {
-           // var uuid1 = new Uuid.Uuid("杦cb41752c36e11e99cb52a2be2dbcce4");
-            var charPtr = stackalloc char[1];
-            var charBytes = (byte*) charPtr;
-            charBytes[0] = 0;
-            charBytes[1] = 103;
-            var resultChar = charPtr[0];
-            var resultByte = (byte) resultChar;
-            var resultByteChar = (char) resultByte;
-            var resultByteCharPtr = (byte*) &resultByteChar;
-            var resultBytes0 = resultByteCharPtr[0];
-            var resultBytes1 = resultByteCharPtr[1];
+            // var uuid1 = new Uuid.Uuid("杦cb41752c36e11e99cb52a2be2dbcce4");
+            //var uuid = Uuid.Uuid.Parse("4cb41752c36e11e99cb52a2be2dbcce4");
+//            GenerateGarbage();
+//            var str = "4cb41752c36e11e99cb52a2be2dbcce4";
+//            GenerateGarbage();
+//            Do(str.AsSpan());
+            var span = "4cb41752c36e11e99cb52a2be2dbcce4".AsSpan();
+            var parsedOld = Uuid.Uuid.TryParse("4cb41752c36e11e99cb52a2be2dbcce4", out var oldUuid);
             var tt = 0;
 
 //            var byte0 = (byte) '0';

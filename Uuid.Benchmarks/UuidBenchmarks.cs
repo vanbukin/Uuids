@@ -1,5 +1,4 @@
 using System;
-using System.IO;
 using System.Runtime.InteropServices;
 using BenchmarkDotNet.Attributes;
 
@@ -331,7 +330,7 @@ namespace Uuid.Benchmarks
 //            Span<byte> buffer = stackalloc byte[16];
 //            return _guid.TryWriteBytes(buffer);
 //        }
-
+//
 //        [Benchmark]
 //        public Uuid uuid_CtorStringN()
 //        {
@@ -397,95 +396,113 @@ namespace Uuid.Benchmarks
 //            return new Guid(_guidStringX);
 //        }
 
-        [Benchmark]
-        public void uuid_CtorStringN_100()
-        {
-            foreach (var uuid in _randomUuidsN_100)
-            {
-                var _ = new Uuid(uuid);
-            }
-        }
+//        [Benchmark]
+//        public void uuid_CtorStringN_100()
+//        {
+//            foreach (var uuid in _randomUuidsN_100)
+//            {
+//                var _ = new Uuid(uuid);
+//            }
+//        }
+//
+//        [Benchmark]
+//        public void guid_CtorStringN_100()
+//        {
+//            foreach (var uuid in _randomUuidsN_100)
+//            {
+//                var _ = new Guid(uuid);
+//            }
+//        }
+//
+//        [Benchmark]
+//        public void uuid_CtorStringN_1000()
+//        {
+//            foreach (var uuid in _randomUuidsN_1000)
+//            {
+//                var _ = new Uuid(uuid);
+//            }
+//        }
+//
+//        [Benchmark]
+//        public void guid_CtorStringN_1000()
+//        {
+//            foreach (var uuid in _randomUuidsN_1000)
+//            {
+//                var _ = new Guid(uuid);
+//            }
+//        }
+//
+//
+//        [Benchmark]
+//        public void uuid_CtorStringN_10_000()
+//        {
+//            foreach (var uuid in _randomUuidsN_10_000)
+//            {
+//                var _ = new Uuid(uuid);
+//            }
+//        }
+//
+//        [Benchmark]
+//        public void guid_CtorStringN_10_000()
+//        {
+//            foreach (var uuid in _randomUuidsN_10_000)
+//            {
+//                var _ = new Guid(uuid);
+//            }
+//        }
+//
+//        [Benchmark]
+//        public void uuid_CtorStringN_100_000()
+//        {
+//            foreach (var uuid in _randomUuidsN_100_000)
+//            {
+//                var _ = new Uuid(uuid);
+//            }
+//        }
+//
+//        [Benchmark]
+//        public void guid_CtorStringN_100_000()
+//        {
+//            foreach (var uuid in _randomUuidsN_100_000)
+//            {
+//                var _ = new Guid(uuid);
+//            }
+//        }
 
-        [Benchmark]
-        public void guid_CtorStringN_100()
-        {
-            foreach (var uuid in _randomUuidsN_100)
-            {
-                var _ = new Guid(uuid);
-            }
-        }
-
-        [Benchmark]
-        public void uuid_CtorStringN_1000()
-        {
-            foreach (var uuid in _randomUuidsN_1000)
-            {
-                var _ = new Uuid(uuid);
-            }
-        }
-
-        [Benchmark]
-        public void guid_CtorStringN_1000()
-        {
-            foreach (var uuid in _randomUuidsN_1000)
-            {
-                var _ = new Guid(uuid);
-            }
-        }
-
-
-        [Benchmark]
-        public void uuid_CtorStringN_10_000()
-        {
-            foreach (var uuid in _randomUuidsN_10_000)
-            {
-                var _ = new Uuid(uuid);
-            }
-        }
-
-        [Benchmark]
-        public void guid_CtorStringN_10_000()
-        {
-            foreach (var uuid in _randomUuidsN_10_000)
-            {
-                var _ = new Guid(uuid);
-            }
-        }
-
-        [Benchmark]
-        public void uuid_CtorStringN_100_000()
-        {
-            foreach (var uuid in _randomUuidsN_100_000)
-            {
-                var _ = new Uuid(uuid);
-            }
-        }
-
-        [Benchmark]
-        public void guid_CtorStringN_100_000()
-        {
-            foreach (var uuid in _randomUuidsN_100_000)
-            {
-                var _ = new Guid(uuid);
-            }
-        }
-
-        [Benchmark]
-        public void uuid_CtorStringN_1_000_000()
-        {
-            foreach (var uuid in _randomUuidsN_1_000_000)
-            {
-                var _ = new Uuid(uuid);
-            }
-        }
-
-        [Benchmark]
-        public void guid_CtorStringN_1_000_000()
-        {
-            foreach (var uuid in _randomUuidsN_1_000_000)
-            {
-                var _ = new Guid(uuid);
-            }
-        }
+//        [Benchmark]
+//        public void uuid_ParseN_1_000_000()
+//        {
+//            foreach (var uuid in _randomUuidsN_1_000_000)
+//            {
+//                var _ = Uuid.Parse(uuid.AsSpan());
+//            }
+//        }
+//
+//        [Benchmark]
+//        public void guid_ParseN_1_000_000()
+//        {
+//            foreach (var uuid in _randomUuidsN_1_000_000)
+//            {
+//                var _ = Guid.Parse(uuid.AsSpan());
+//            }
+//        }
+//        
+//        [Benchmark]
+//        public void uuid_TryParseN_1_000_000()
+//        {
+//            foreach (var uuid in _randomUuidsN_1_000_000)
+//            {
+//                var _ = Uuid.TryParse(uuid.AsSpan(), out var _);
+//            }
+//        }
+//
+//        [Benchmark]
+//        public void guid_TryParseN_1_000_000()
+//        {
+//            foreach (var uuid in _randomUuidsN_1_000_000)
+//            {
+//                var _ = Guid.TryParse(uuid.AsSpan(), out var _);
+//            }
+//        }
     }
 }
