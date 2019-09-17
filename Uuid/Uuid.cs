@@ -617,7 +617,7 @@ namespace Uuid
                 {
                     fixed (char* uuidStringPtr = &input.GetPinnableReference())
                     {
-                        ParseWithExceptionsP(input, uuidStringPtr, resultPtr);
+                        ParseWithExceptionsX(input, uuidStringPtr, resultPtr);
                     }
 
                     return result;

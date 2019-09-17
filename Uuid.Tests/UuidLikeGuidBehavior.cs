@@ -96,6 +96,24 @@ namespace Uuid.Tests
             });
         }
 
+        [Test]
+        public void Ctor_From_String_Empty_SameAsGuid()
+        {
+            var str = string.Empty;
+
+            Assert.Multiple(() =>
+            {
+                Assert.Throws<FormatException>(() =>
+                {
+                    var _ = new Guid(str);
+                });
+                Assert.Throws<FormatException>(() =>
+                {
+                    var _ = new Uuid(str);
+                });
+            });
+        }
+
         [TestCaseSource(typeof(TestData), nameof(TestData.CorrectUuidBytesArrays))]
         public unsafe void Ctor_From_ReadOnlySpan_SameAsGuid(byte[] correctBytes)
         {
