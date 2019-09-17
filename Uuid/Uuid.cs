@@ -19,6 +19,9 @@ namespace Uuid
     [SuppressMessage("ReSharper", "RedundantDefaultMemberInitializer")]
     [SuppressMessage("ReSharper", "NonReadonlyMemberInGetHashCode")]
     [SuppressMessage("ReSharper", "IntroduceOptionalParameters.Global")]
+    [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
+    [SuppressMessage("ReSharper", "CommentTypo")]
+    [SuppressMessage("ReSharper", "HeapView.ObjectAllocation.Evident")]
     public unsafe struct Uuid : IFormattable, IComparable, IComparable<Uuid>, IEquatable<Uuid>
     {
         static Uuid()
