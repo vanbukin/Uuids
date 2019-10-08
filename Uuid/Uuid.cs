@@ -3,6 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
 
 namespace Uuid
 {
@@ -34,6 +36,7 @@ namespace Uuid
             }
 
             TableFromHexToBytes = (byte*) Marshal.AllocHGlobal(103).ToPointer();
+            TableFromHexToBytes2 = (byte*) Marshal.AllocHGlobal(256).ToPointer();
             for (var i = 0; i < 103; i++)
                 TableFromHexToBytes[i] = (char) i switch
                 {
@@ -61,6 +64,33 @@ namespace Uuid
                     'F' => (byte) 0xf,
                     _ => byte.MaxValue
                 };
+            for (var i = 0; i < 256; i++)
+                TableFromHexToBytes2[i] = (char) i switch
+                {
+                    '0' => (byte) 0x0,
+                    '1' => (byte) 0x1,
+                    '2' => (byte) 0x2,
+                    '3' => (byte) 0x3,
+                    '4' => (byte) 0x4,
+                    '5' => (byte) 0x5,
+                    '6' => (byte) 0x6,
+                    '7' => (byte) 0x7,
+                    '8' => (byte) 0x8,
+                    '9' => (byte) 0x9,
+                    'a' => (byte) 0xa,
+                    'A' => (byte) 0xa,
+                    'b' => (byte) 0xb,
+                    'B' => (byte) 0xb,
+                    'c' => (byte) 0xc,
+                    'C' => (byte) 0xc,
+                    'd' => (byte) 0xd,
+                    'D' => (byte) 0xd,
+                    'e' => (byte) 0xe,
+                    'E' => (byte) 0xe,
+                    'f' => (byte) 0xf,
+                    'F' => (byte) 0xf,
+                    _ => ByteMask
+                };
 
 #nullable disable
             // ReSharper disable once PossibleNullReferenceException
@@ -71,8 +101,11 @@ namespace Uuid
         }
 
         private const ushort MaximalChar = 103;
+        private const byte ByteMask = 0b10000000;
+
         private static readonly uint* TableToHex;
         private static readonly byte* TableFromHexToBytes;
+        private static readonly byte* TableFromHexToBytes2;
         private static readonly Func<int, string> FastAllocateString;
 
         public static readonly Uuid Empty = new Uuid();
@@ -243,6 +276,17 @@ namespace Uuid
 
                     return uuidString;
                 }
+                case 'M':
+                case 'm':
+                {
+                    var uuidString = FastAllocateString(32);
+                    fixed (char* uuidChars = uuidString)
+                    {
+                        FormatNAvx((byte*) uuidChars);
+                    }
+
+                    return uuidString;
+                }
                 case 'B':
                 case 'b':
                 {
@@ -326,6 +370,117 @@ namespace Uuid
             destUints[13] = TableToHex[_byte13];
             destUints[14] = TableToHex[_byte14];
             destUints[15] = TableToHex[_byte15];
+        }
+
+        private static Vector256<byte> ShuffleMask = Vector256.Create(
+            255, 0, 255, 2, 255, 4, 255, 6, 255, 8, 255, 10, 255, 12, 255, 14,
+            255, 0, 255, 2, 255, 4, 255, 6, 255, 8, 255, 10, 255, 12, 255, 14);
+        
+
+        private static Vector256<byte> AsciiTable = Vector256.Create(
+            (byte) 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102,
+            48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102);
+        // '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
+
+        private void FormatNAvxWorks(short* dest)
+        {
+            // ddddddddddddddddddddddddddddddd
+            fixed (Uuid* thisPtr = &this)
+            {
+                var uuidVector = Avx2.ConvertToVector256Int16(Sse3.LoadDquVector128((byte*) thisPtr));
+                var hi = Avx2.ShiftRightLogical(uuidVector, 4).AsByte();
+                var lo = Avx2.Shuffle(uuidVector.AsByte(), ShuffleMask);
+                var asciiBytes = Avx2.Shuffle(AsciiTable, Avx2.And(Avx2.Or(hi, lo), Vector256.Create((byte) 15)));
+                Avx.Store(dest, Avx2.ConvertToVector256Int16(asciiBytes.GetLower()));
+                Avx.Store((dest + 8), Avx2.ConvertToVector256Int16(asciiBytes.GetUpper()));
+            }
+        }
+        
+        private static Vector256<byte> ShuffleMask2 = Vector256.Create(
+            255, 0, 255, 4, 255, 8, 255, 12, 255, 16, 255, 20, 255, 24, 255, 28,
+            255, 0, 255, 4, 255, 8, 255, 12, 255, 16, 255, 20, 255, 24, 255, 28);
+
+        internal static ReadOnlySpan<byte> s_lowerHexLookupTable => new byte[]
+        {
+            0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66
+        };
+
+        private static Vector128<byte> HexLookupTable =
+            Vector128.Create((byte) 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66);
+
+        private static Vector128<byte> ShiftMask = Vector128.Create((byte) 0x0F);
+        private static Vector128<byte> UnpackMask = Vector128.Create((byte) 0x00);
+
+        private static Vector256<byte> ShiftMask256 = Vector256.Create((byte) 0x0F);
+        private static Vector256<byte> UnpackMask256 = Vector256.Create((byte) 0x00);
+
+        private static Vector256<byte> HexLookupTable256 = Vector256.Create(
+            (byte) 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
+            0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66
+        );
+
+        private void FormatNAvx(byte* dest)
+        {
+            // ddddddddddddddddddddddddddddddd
+            fixed (Uuid* thisPtr = &this)
+            {
+                //var value = (Sse3.LoadDquVector128((byte*) thisPtr));
+
+                //var hiVector = value.GetUpper();
+
+                var uuidVector = Avx2.ConvertToVector256Int16(Sse3.LoadDquVector128((byte*) thisPtr));
+                var hiHalf = Avx2.ShiftRightLogical(uuidVector, 4).AsByte();
+                var loHalf = Avx2.Shuffle(uuidVector.AsByte(), ShuffleMask);
+
+                var sum = Avx2.Or(hiHalf, loHalf);
+                //var hiHalf = Avx2.And(hiShift, ShiftMask256);
+                //var loHalf = Avx2.And(value.AsByte(), ShiftMask256);
+
+                var shifted = Avx2.And(sum, ShiftMask256);
+
+                //var resHi = Avx2.Shuffle(HexLookupTable256);
+                var shuffle = Avx2.Shuffle(HexLookupTable256, shifted);
+
+                var hi = Avx2.UnpackHigh(shuffle, UnpackMask256);
+                var lo = Avx2.UnpackLow(shuffle, UnpackMask256);
+
+                Avx.Store(dest, lo);
+                Avx.Store(dest + 32, hi);
+                var tt = 0;
+
+                //var resHi = Avx2.Shuffle(HexLookupTable256, Avx2.UnpackHigh(hiHalf, loHalf));
+                // var resLo = Avx2.Shuffle(HexLookupTable256, Avx2.UnpackLow(hiHalf, loHalf));
+
+                //Avx.Store(dest, Avx2.UnpackLow(resLo, UnpackMask256));
+                // Avx.Store(dest + 32, Avx2.UnpackHigh(resHi, UnpackMask256));
+
+                //var resHi = Ssse3.Shuffle(HexLookupTable, Sse2.UnpackHigh(hiHalf, loHalf));
+                //var resLo = Ssse3.Shuffle(HexLookupTable, Sse2.UnpackLow(hiHalf, loHalf));
+//                Sse2.Store(dest, Sse2.UnpackLow(resLo, UnpackMask));
+//                Sse2.Store(dest + 16, Sse2.UnpackHigh(resLo, UnpackMask));
+//                Sse2.Store(dest + 32, Sse2.UnpackLow(resHi, UnpackMask));
+//                Sse2.Store(dest + 48, Sse2.UnpackHigh(resHi, UnpackMask));
+            }
+        }
+
+        private void FormatNSse(byte* dest)
+        {
+            // ddddddddddddddddddddddddddddddd
+            fixed (Uuid* thisPtr = &this)
+            {
+                var value = Sse2.LoadVector128((byte*) thisPtr);
+
+                var hiShift = Sse2.ShiftRightLogical(value.AsInt16(), 4).AsByte();
+                var hiHalf = Sse2.And(hiShift, ShiftMask);
+                var loHalf = Sse2.And(value, ShiftMask);
+
+                var resHi = Ssse3.Shuffle(HexLookupTable, Sse2.UnpackHigh(hiHalf, loHalf));
+                var resLo = Ssse3.Shuffle(HexLookupTable, Sse2.UnpackLow(hiHalf, loHalf));
+                Sse2.Store(dest, Sse2.UnpackLow(resLo, UnpackMask));
+                Sse2.Store(dest + 16, Sse2.UnpackHigh(resLo, UnpackMask));
+                Sse2.Store(dest + 32, Sse2.UnpackLow(resHi, UnpackMask));
+                Sse2.Store(dest + 48, Sse2.UnpackHigh(resHi, UnpackMask));
+            }
         }
 
         private void FormatB(char* dest)
@@ -428,6 +583,57 @@ namespace Uuid
             }
 
             this = result;
+        }
+
+        public Uuid(string input, byte oldflag)
+        {
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            fixed (char* uuidStringPtr = input)
+            {
+                ParseWithExceptions(input, uuidStringPtr, resultPtr);
+            }
+
+            this = result;
+        }
+
+        public Uuid(string input, sbyte newFlag)
+        {
+            if (input == null)
+                throw new ArgumentNullException(nameof(input));
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            fixed (char* uuidStringPtr = input)
+            {
+                ParseWithExceptionsNew(input, uuidStringPtr, resultPtr);
+            }
+
+            this = result;
+        }
+
+        public static bool TryParseNew(string? input, out Uuid output)
+        {
+            if (input == null)
+            {
+                output = default;
+                return false;
+            }
+
+            var result = new Uuid();
+            var resultPtr = (byte*) &result;
+            fixed (char* uuidStringPtr = input)
+            {
+                if (ParseWithoutExceptionsNew(input, uuidStringPtr, resultPtr))
+                {
+                    output = result;
+                    return true;
+                }
+            }
+
+            output = default;
+            return false;
         }
 
         public static Uuid Parse(string input)
@@ -929,6 +1135,74 @@ namespace Uuid
             }
         }
 
+        private static void ParseWithExceptionsNew(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length == 0)
+                throw new FormatException("Unrecognized Uuid format.");
+
+            switch (uuidString[0])
+            {
+                case '(':
+                {
+                    ParseWithExceptionsP(uuidString, uuidStringPtr, resultPtr);
+                    break;
+                }
+                case '{':
+                {
+                    if (uuidString.Contains('-'))
+                    {
+                        ParseWithExceptionsB(uuidString, uuidStringPtr, resultPtr);
+                        break;
+                    }
+
+                    ParseWithExceptionsX(uuidString, uuidStringPtr, resultPtr);
+                    break;
+                }
+                default:
+                {
+                    if (uuidString.Contains('-'))
+                    {
+                        ParseWithExceptionsD(uuidString, uuidStringPtr, resultPtr);
+                        break;
+                    }
+
+                    ParseWithExceptionsN2(uuidString, uuidStringPtr, resultPtr);
+                    break;
+                }
+            }
+        }
+
+        private static bool ParseWithoutExceptionsNew(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length == 0)
+                return false;
+            switch (uuidString[0])
+            {
+                case '(':
+                {
+                    return ParseWithoutExceptionsP(uuidString, uuidStringPtr, resultPtr);
+                }
+                case '{':
+                {
+                    return uuidString.Contains('-')
+                        ? ParseWithoutExceptionsB(uuidString, uuidStringPtr, resultPtr)
+                        : ParseWithoutExceptionsX(uuidString, uuidStringPtr, resultPtr);
+                }
+                default:
+                {
+                    return uuidString.Contains('-')
+                        ? ParseWithoutExceptionsD(uuidString, uuidStringPtr, resultPtr)
+                        : ParseWithoutExceptionsN2(uuidString, uuidStringPtr, resultPtr);
+                }
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private static bool ParseWithoutExceptionsN2(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            return (uint) uuidString.Length == 32u && TryParsePtrN2((byte*) uuidStringPtr, resultPtr);
+        }
+
         private static void ParseWithExceptionsD(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 36u) throw new FormatException("Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
@@ -946,6 +1220,15 @@ namespace Uuid
                     "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
 
             if (!TryParsePtrN(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
+        }
+
+        private static void ParseWithExceptionsN2(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        {
+            if ((uint) uuidString.Length != 32u)
+                throw new FormatException(
+                    "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
+
+            if (!TryParsePtrN2((byte*) uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsB(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
@@ -1304,6 +1587,97 @@ namespace Uuid
             }
 
             return false;
+        }
+
+        [SuppressMessage("ReSharper", "JoinDeclarationAndInitializer")]
+        private static bool TryParsePtrN2(byte* value, byte* resultPtr)
+        {
+            // e.g. "d85b1407351d4694939203acc5870eb1"
+
+            byte error = 0;
+            byte hexByteHi;
+            byte hexByteLow;
+            hexByteHi = TableFromHexToBytes2[value[0]];
+            hexByteLow = TableFromHexToBytes2[value[2]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[1] | value[3]);
+            resultPtr[0] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[4]];
+            hexByteLow = TableFromHexToBytes2[value[6]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[5] | value[7]);
+            resultPtr[1] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[8]];
+            hexByteLow = TableFromHexToBytes2[value[10]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[9] | value[11]);
+            resultPtr[2] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[12]];
+            hexByteLow = TableFromHexToBytes2[value[14]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[13] | value[15]);
+            resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[16]];
+            hexByteLow = TableFromHexToBytes2[value[18]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[17] | value[19]);
+            resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[20]];
+            hexByteLow = TableFromHexToBytes2[value[22]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[21] | value[23]);
+            resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[24]];
+            hexByteLow = TableFromHexToBytes2[value[26]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[25] | value[27]);
+            resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[28]];
+            hexByteLow = TableFromHexToBytes2[value[30]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[29] | value[31]);
+            resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[32]];
+            hexByteLow = TableFromHexToBytes2[value[34]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[33] | value[35]);
+            resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[36]];
+            hexByteLow = TableFromHexToBytes2[value[38]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[37] | value[39]);
+            resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[40]];
+            hexByteLow = TableFromHexToBytes2[value[42]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[41] | value[43]);
+            resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[44]];
+            hexByteLow = TableFromHexToBytes2[value[46]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[45] | value[47]);
+            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[48]];
+            hexByteLow = TableFromHexToBytes2[value[50]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[49] | value[51]);
+            resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[52]];
+            hexByteLow = TableFromHexToBytes2[value[54]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[53] | value[55]);
+            resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[56]];
+            hexByteLow = TableFromHexToBytes2[value[58]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[57] | value[59]);
+            resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[value[60]];
+            hexByteLow = TableFromHexToBytes2[value[62]];
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[61] | value[63]);
+            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            return error == 0;
         }
 
         private static bool TryParsePtrPorB(char* value, byte* resultPtr)

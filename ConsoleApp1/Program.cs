@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Buffers.Binary;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
 
@@ -7,123 +8,216 @@ namespace ConsoleApp1
 {
     public static unsafe class Program
     {
-        private static readonly byte* TableFromHexToBytes;
+        private static byte* TableFromHexToBytes2;
+        private const byte ByteMask = 0b10000000;
 
-        static Program()
+        [SuppressMessage("ReSharper", "JoinDeclarationAndInitializer")]
+        private static bool TryParsePtrN2(char* value, byte* resultPtr)
         {
-            TableFromHexToBytes = (byte*) Marshal.AllocHGlobal(256).ToPointer();
-            for (var i = 0; i < 256; i++)
-                TableFromHexToBytes[i] = (char) i switch
-                {
-                    '0' => (byte) 0x0,
-                    '1' => (byte) 0x1,
-                    '2' => (byte) 0x2,
-                    '3' => (byte) 0x3,
-                    '4' => (byte) 0x4,
-                    '5' => (byte) 0x5,
-                    '6' => (byte) 0x6,
-                    '7' => (byte) 0x7,
-                    '8' => (byte) 0x8,
-                    '9' => (byte) 0x9,
-                    'a' => (byte) 0xa,
-                    'A' => (byte) 0xa,
-                    'b' => (byte) 0xb,
-                    'B' => (byte) 0xb,
-                    'c' => (byte) 0xc,
-                    'C' => (byte) 0xc,
-                    'd' => (byte) 0xd,
-                    'D' => (byte) 0xd,
-                    'e' => (byte) 0xe,
-                    'E' => (byte) 0xe,
-                    'f' => (byte) 0xf,
-                    'F' => (byte) 0xf,
-                    _ => byte.MaxValue
-                };
+            // e.g. "d85b1407351d4694939203acc5870eb1"
+            byte hexByteHi;
+            byte hexByteLow;
+            var nonAsciiBytesParsed = 0;
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[0]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[1]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[0] >> 8);
+            nonAsciiBytesParsed += (byte) (value[1] >> 8);
+            resultPtr[0] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[2]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[3]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[2] >> 8);
+            nonAsciiBytesParsed += (byte) (value[3] >> 8);
+            resultPtr[1] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[4]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[5]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[4] >> 8);
+            nonAsciiBytesParsed += (byte) (value[5] >> 8);
+            resultPtr[2] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[6]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[7]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[6] >> 8);
+            nonAsciiBytesParsed += (byte) (value[7] >> 8);
+            resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[8]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[9]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[8] >> 8);
+            nonAsciiBytesParsed += (byte) (value[9] >> 8);
+            resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[10]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[11]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[10] >> 8);
+            nonAsciiBytesParsed += (byte) (value[11] >> 8);
+            resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[12]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[13]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[12] >> 8);
+            nonAsciiBytesParsed += (byte) (value[13] >> 8);
+            resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[14]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[15]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[14] >> 8);
+            nonAsciiBytesParsed += (byte) (value[15] >> 8);
+            resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[16]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[17]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[16] >> 8);
+            nonAsciiBytesParsed += (byte) (value[17] >> 8);
+            resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[18]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[19]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[18] >> 8);
+            nonAsciiBytesParsed += (byte) (value[19] >> 8);
+            resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[20]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[21]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[20] >> 8);
+            nonAsciiBytesParsed += (byte) (value[21] >> 8);
+            resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[22]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[23]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[22] >> 8);
+            nonAsciiBytesParsed += (byte) (value[23] >> 8);
+            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[24]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[25]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[24] >> 8);
+            nonAsciiBytesParsed += (byte) (value[25] >> 8);
+            resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[26]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[27]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[26] >> 8);
+            nonAsciiBytesParsed += (byte) (value[27] >> 8);
+            resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[28]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[29]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[28] >> 8);
+            nonAsciiBytesParsed += (byte) (value[29] >> 8);
+            resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            hexByteHi = TableFromHexToBytes2[(byte) value[30]];
+            hexByteLow = TableFromHexToBytes2[(byte) value[31]];
+            nonAsciiBytesParsed += hexByteHi & ByteMask;
+            nonAsciiBytesParsed += hexByteLow & ByteMask;
+            nonAsciiBytesParsed += (byte) (value[30] >> 8);
+            nonAsciiBytesParsed += (byte) (value[31] >> 8);
+            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+
+            return nonAsciiBytesParsed == 0;
         }
 
+        private const ushort CharMask = 0b00000000_11111111;
 
-        private static bool TryParseHexToUint32(ReadOnlySpan<char> value, out uint result)
-        {
-            result = 0u;
-            if (value.IsEmpty || (uint) value.Length != 8) return false;
-
-            var parsedData = 0u;
-            for (var i = 0; i < 4; i++)
-            {
-                byte hexByteHi;
-                byte hexByteLow;
-                if ((hexByteHi = TableFromHexToBytes[value[i * 2]]) != 0xFF
-                    && (hexByteLow = TableFromHexToBytes[value[i * 2 + 1]]) != 0xFF)
-                {
-                    var hexByte = (uint) ((hexByteHi << 4) | hexByteLow) << (i * 8);
-                    parsedData |= hexByte;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-
-            result = parsedData;
-            return true;
-        }
-
-        private static byte[] GetNumberBytes(uint number)
-        {
-            var bytesOnStack = stackalloc byte[4];
-            ((uint*) bytesOnStack)[0] = number;
-            var result = new byte[4];
-            result[0] = bytesOnStack[0];
-            result[1] = bytesOnStack[1];
-            result[2] = bytesOnStack[2];
-            result[3] = bytesOnStack[3];
-            return result;
-        }
-
-        private static void GenerateGarbage()
-        {
-            for (var i = 0; i < 1_000_000; i++)
-            {
-                var str = i.ToString();
-            }
-        }
-
-        private static void Do(ReadOnlySpan<char> chars)
-        {
-            fixed (char* ptr = &chars.GetPinnableReference())
-            {
-                DoPtr(ptr, chars.Length);
-            }
-        }
-
-        private static void DoPtr(char* ptr, int length)
-        {
-            GenerateGarbage();
-            var spanExternal = new Span<char>(ptr, length);
-            for (var i = 0; i < length; i++)
-                if (i % 10 == 0)
-                {
-                    GenerateGarbage();
-                    var spanBefore = new Span<char>(ptr, length);
-                    GC.Collect(2, GCCollectionMode.Forced, true, true);
-                    var spanAfter = new Span<char>(ptr, length);
-                    var xx = 0;
-                }
-
-            var tt = 0;
-        }
+     
 
         public static void Main(string[] args)
         {
+            var parse = Uuid.Uuid.TryParseNew("11223344556677889900aabbccddeeff", out var parsed);
+            var avxed = parsed.ToString("M");
+//            TableFromHexToBytes2 = (byte*) Marshal.AllocHGlobal(256).ToPointer();
+//            for (var i = 0; i < 256; i++)
+//                TableFromHexToBytes2[i] = (char) i switch
+//                {
+//                    '0' => (byte) 0x0,
+//                    '1' => (byte) 0x1,
+//                    '2' => (byte) 0x2,
+//                    '3' => (byte) 0x3,
+//                    '4' => (byte) 0x4,
+//                    '5' => (byte) 0x5,
+//                    '6' => (byte) 0x6,
+//                    '7' => (byte) 0x7,
+//                    '8' => (byte) 0x8,
+//                    '9' => (byte) 0x9,
+//                    'a' => (byte) 0xa,
+//                    'A' => (byte) 0xa,
+//                    'b' => (byte) 0xb,
+//                    'B' => (byte) 0xb,
+//                    'c' => (byte) 0xc,
+//                    'C' => (byte) 0xc,
+//                    'd' => (byte) 0xd,
+//                    'D' => (byte) 0xd,
+//                    'e' => (byte) 0xe,
+//                    'E' => (byte) 0xe,
+//                    'f' => (byte) 0xf,
+//                    'F' => (byte) 0xf,
+//                    _ => (byte) 0b10000000
+//                };
+//
+//            byte b = 0b10000000;
+            var charPtr = stackalloc char[1];
+            var bytePtr = (byte*) charPtr;
+            bytePtr[0] = 101;
+            bytePtr[1] = 102;
+            var character = charPtr[0];
+            var charToByte = (byte) character;
+            var char2ToByte = (byte) (character >> 8);
+            var charNormal = (char) (CharMask & character);
+//
+//            var ptrToParse = stackalloc char[32];
+//            var stringToParse = "d85b1407351d4694939203acc5870eb1";
+//            for (int i = 0; i < stringToParse.Length; i++)
+//            {
+//                ptrToParse[i] = stringToParse[i];
+//            }
+//            var outputPtr = stackalloc byte[16];
+//            var parsed = TryParsePtrN2(ptrToParse, outputPtr);
+//            var outputString = ConvertHexBytesToStringN(new Span<byte>(outputPtr, 16).ToArray());
+            sbyte newFlag = 0;
+            var uuid = new Uuid.Uuid("d85b1407351d4694939203acc5870eb1", newFlag);
+            var tt = 0;
             // var uuid1 = new Uuid.Uuid("杦cb41752c36e11e99cb52a2be2dbcce4");
             //var uuid = Uuid.Uuid.Parse("4cb41752c36e11e99cb52a2be2dbcce4");
 //            GenerateGarbage();
 //            var str = "4cb41752c36e11e99cb52a2be2dbcce4";
 //            GenerateGarbage();
 //            Do(str.AsSpan());
-            var span = "4cb41752c36e11e99cb52a2be2dbcce4".AsSpan();
-            var parsedOld = Uuid.Uuid.TryParse("4cb41752c36e11e99cb52a2be2dbcce4", out var oldUuid);
-            var tt = 0;
+//            var span = "4cb41752c36e11e99cb52a2be2dbcce4".AsSpan();
+//            var parsedOld = Uuid.Uuid.TryParse("4cb41752c36e11e99cb52a2be2dbcce4", out var oldUuid);
+//            var tt = 0;
 
 //            var byte0 = (byte) '0';
 //            var byte9 = (byte) '9';
@@ -187,72 +281,158 @@ namespace ConsoleApp1
             var end = 0;
         }
 
-        private static ParseResult Parse(ReadOnlySpan<char> chars)
+        private static string ConvertHexBytesToStringN(byte[] bytesToHex)
         {
-            var stringToParse = new string(chars);
-            var uintBigEndianResult = 0u;
-            var uintBigEndianBytes = new byte[4];
-            var uintWasParsed = uint.TryParse(stringToParse, NumberStyles.AllowHexSpecifier, null, out var uintResult);
-            if (uintWasParsed)
-            {
-                uintBigEndianResult = BinaryPrimitives.ReverseEndianness(uintResult);
-                fixed (byte* uintBigEndianBytesPtr = uintBigEndianBytes)
-                {
-                    ((uint*) uintBigEndianBytesPtr)[0] = uintBigEndianResult;
-                }
-            }
-
-            var customResultBytes = new byte[4];
-            var customWasParsed = TryParseHexToUint32(chars, out var customResult);
-            if (customWasParsed)
-                fixed (byte* customResultBytesPtr = customResultBytes)
-                {
-                    ((uint*) customResultBytesPtr)[0] = customResult;
-                }
-
-            return new ParseResult(
-                stringToParse,
-                uintWasParsed,
-                uintResult,
-                uintBigEndianResult,
-                uintBigEndianBytes,
-                customWasParsed,
-                customResult,
-                customResultBytes);
+            // dddddddddddddddddddddddddddddddd
+            if (bytesToHex == null)
+                throw new ArgumentNullException(nameof(bytesToHex));
+            if (bytesToHex.Length != 16)
+                throw new ArgumentException(nameof(bytesToHex));
+            var nString = BitConverter
+                .ToString(bytesToHex)
+                .Replace("-", string.Empty)
+                .ToLowerInvariant();
+            return nString;
         }
 
-        private class ParseResult
-        {
-            public ParseResult(
-                string stringToParse,
-                bool uintWasParsed,
-                uint uintResult,
-                uint uintBigEndianResult,
-                byte[] uintBigEndianBytes,
-                bool customWasParsed,
-                uint customResult,
-                byte[] customResultBytes)
-            {
-                StringToParse = stringToParse;
-                UintWasParsed = uintWasParsed;
-                UintResult = uintResult;
-                UintBigEndianResult = uintBigEndianResult;
-                UintBigEndianBytes = uintBigEndianBytes;
-                CustomWasParsed = customWasParsed;
-                CustomResult = customResult;
-                CustomResultBytes = customResultBytes;
-            }
-
-            public string StringToParse { get; }
-            public bool UintWasParsed { get; }
-            public uint UintResult { get; }
-            public uint UintBigEndianResult { get; }
-            public byte[] UintBigEndianBytes { get; }
-            public bool CustomWasParsed { get; }
-            public uint CustomResult { get; }
-            public byte[] CustomResultBytes { get; }
-        }
-    }
+        //
+//        private static bool TryParseHexToUint32(ReadOnlySpan<char> value, out uint result)
+//        {
+//            result = 0u;
+//            if (value.IsEmpty || (uint) value.Length != 8) return false;
+//
+//            var parsedData = 0u;
+//            for (var i = 0; i < 4; i++)
+//            {
+//                byte hexByteHi;
+//                byte hexByteLow;
+//                if ((hexByteHi = TableFromHexToBytes[value[i * 2]]) != 0xFF
+//                    && (hexByteLow = TableFromHexToBytes[value[i * 2 + 1]]) != 0xFF)
+//                {
+//                    var hexByte = (uint) ((hexByteHi << 4) | hexByteLow) << (i * 8);
+//                    parsedData |= hexByte;
+//                }
+//                else
+//                {
+//                    return false;
+//                }
+//            }
+//
+//            result = parsedData;
+//            return true;
+//        }
+//
+//        private static byte[] GetNumberBytes(uint number)
+//        {
+//            var bytesOnStack = stackalloc byte[4];
+//            ((uint*) bytesOnStack)[0] = number;
+//            var result = new byte[4];
+//            result[0] = bytesOnStack[0];
+//            result[1] = bytesOnStack[1];
+//            result[2] = bytesOnStack[2];
+//            result[3] = bytesOnStack[3];
+//            return result;
+//        }
+//
+//        private static void GenerateGarbage()
+//        {
+//            for (var i = 0; i < 1_000_000; i++)
+//            {
+//                var str = i.ToString();
+//            }
+//        }
+//
+//        private static void Do(ReadOnlySpan<char> chars)
+//        {
+//            fixed (char* ptr = &chars.GetPinnableReference())
+//            {
+//                DoPtr(ptr, chars.Length);
+//            }
+//        }
+//
+//        private static void DoPtr(char* ptr, int length)
+//        {
+//            GenerateGarbage();
+//            var spanExternal = new Span<char>(ptr, length);
+//            for (var i = 0; i < length; i++)
+//                if (i % 10 == 0)
+//                {
+//                    GenerateGarbage();
+//                    var spanBefore = new Span<char>(ptr, length);
+//                    GC.Collect(2, GCCollectionMode.Forced, true, true);
+//                    var spanAfter = new Span<char>(ptr, length);
+//                    var xx = 0;
+//                }
+//
+//            var tt = 0;
+//        }
+//
+//        private static ParseResult Parse(ReadOnlySpan<char> chars)
+//        {
+//            var stringToParse = new string(chars);
+//            var uintBigEndianResult = 0u;
+//            var uintBigEndianBytes = new byte[4];
+//            var uintWasParsed = uint.TryParse(stringToParse, NumberStyles.AllowHexSpecifier, null, out var uintResult);
+//            if (uintWasParsed)
+//            {
+//                uintBigEndianResult = BinaryPrimitives.ReverseEndianness(uintResult);
+//                fixed (byte* uintBigEndianBytesPtr = uintBigEndianBytes)
+//                {
+//                    ((uint*) uintBigEndianBytesPtr)[0] = uintBigEndianResult;
+//                }
+//            }
+//
+//            var customResultBytes = new byte[4];
+//            var customWasParsed = TryParseHexToUint32(chars, out var customResult);
+//            if (customWasParsed)
+//                fixed (byte* customResultBytesPtr = customResultBytes)
+//                {
+//                    ((uint*) customResultBytesPtr)[0] = customResult;
+//                }
+//
+//            return new ParseResult(
+//                stringToParse,
+//                uintWasParsed,
+//                uintResult,
+//                uintBigEndianResult,
+//                uintBigEndianBytes,
+//                customWasParsed,
+//                customResult,
+//                customResultBytes);
+//        }
+//
+//        private class ParseResult
+//        {
+//            public ParseResult(
+//                string stringToParse,
+//                bool uintWasParsed,
+//                uint uintResult,
+//                uint uintBigEndianResult,
+//                byte[] uintBigEndianBytes,
+//                bool customWasParsed,
+//                uint customResult,
+//                byte[] customResultBytes)
+//            {
+//                StringToParse = stringToParse;
+//                UintWasParsed = uintWasParsed;
+//                UintResult = uintResult;
+//                UintBigEndianResult = uintBigEndianResult;
+//                UintBigEndianBytes = uintBigEndianBytes;
+//                CustomWasParsed = customWasParsed;
+//                CustomResult = customResult;
+//                CustomResultBytes = customResultBytes;
+//            }
+//
+//            public string StringToParse { get; }
+//            public bool UintWasParsed { get; }
+//            public uint UintResult { get; }
+//            public uint UintBigEndianResult { get; }
+//            public byte[] UintBigEndianBytes { get; }
+//            public bool CustomWasParsed { get; }
+//            public uint CustomResult { get; }
+//            public byte[] CustomResultBytes { get; }
+//        }
+//    }
 
 //    [StructLayout(LayoutKind.Explicit, Pack = 1)]
 //    public unsafe struct Uuid
@@ -388,5 +568,5 @@ namespace ConsoleApp1
 //            result.SetFailure(false, "Uuid string should only contain hexadecimal characters.");
 //            return false;
 //        }
-//    }
+    }
 }

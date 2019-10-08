@@ -17,9 +17,9 @@ namespace Uuid.Benchmarks
         private string _guidStringN;
         private string _guidStringP;
         private string _guidStringX;
+        private string[] _brokenRandomUuidsN_1_000_000;
         private string[] _randomUuidsN_1_000_000;
         private string[] _randomUuidsN_10_000;
-
         private string[] _randomUuidsN_100;
         private string[] _randomUuidsN_100_000;
         private string[] _randomUuidsN_1000;
@@ -74,11 +74,60 @@ namespace Uuid.Benchmarks
             _uuidBytesPtr[13] = 219;
             _uuidBytesPtr[14] = 204;
             _uuidBytesPtr[15] = 228;
-            _randomUuidsN_100 = GenerateRandomUuidNStringsArray(100);
-            _randomUuidsN_1000 = GenerateRandomUuidNStringsArray(1000);
-            _randomUuidsN_10_000 = GenerateRandomUuidNStringsArray(10_000);
-            _randomUuidsN_100_000 = GenerateRandomUuidNStringsArray(100_000);
-            _randomUuidsN_1_000_000 = GenerateRandomUuidNStringsArray(1_000_000);
+            //_randomUuidsN_100 = GenerateRandomUuidNStringsArray(100);
+            //_randomUuidsN_1000 = GenerateRandomUuidNStringsArray(1000);
+            //_randomUuidsN_10_000 = GenerateRandomUuidNStringsArray(10_000);
+            //_randomUuidsN_100_000 = GenerateRandomUuidNStringsArray(100_000);
+            _brokenRandomUuidsN_1_000_000 = GenerateSometimesBrokenGuidsNStringsArray(1_000_000);
+        }
+        
+        public static string[] GenerateSometimesBrokenGuidsNStringsArray(int count)
+        {
+            var random = new Random();
+            var uuidIntegers = stackalloc int[4];
+            var charToBreakPtr = stackalloc char[1];
+            var charBytesPtr = (byte*) charToBreakPtr;
+            var result = new string[count];
+            var breakUpperByteOnCharArray = new bool[32];
+            for (int i = 0; i < breakUpperByteOnCharArray.Length; i++)
+            {
+                breakUpperByteOnCharArray[i] = false;
+            }
+
+            for (var i = 0; i < count; i++)
+            {
+                for (var j = 0; j < 4; j++) uuidIntegers[j] = random.Next();
+
+                var bytesOfUuid = new ReadOnlySpan<byte>(uuidIntegers, 16).ToArray();
+                var nString = BitConverter
+                    .ToString(bytesOfUuid)
+                    .Replace("-", string.Empty)
+                    .ToLowerInvariant();
+                var spanOfString = MemoryMarshal.CreateSpan(ref MemoryMarshal.GetReference(nString.AsSpan()), nString.Length);
+
+
+                var brokenChar = i % 32;
+                if (brokenChar != 0)
+                {
+                    var breakUpperByte = breakUpperByteOnCharArray[brokenChar];
+                    breakUpperByteOnCharArray[brokenChar] = !breakUpperByte;
+                    charToBreakPtr[0] = nString[brokenChar];
+                    if (breakUpperByte)
+                    {
+                        charBytesPtr[0] = 110;
+                    }
+                    else
+                    {
+                        charBytesPtr[1] = 110;
+                    }
+
+                    spanOfString[brokenChar] = charToBreakPtr[0];
+                }
+
+                result[i] = nString;
+            }
+
+            return result;
         }
 
         public static string[] GenerateRandomUuidNStringsArray(int count)
@@ -101,7 +150,7 @@ namespace Uuid.Benchmarks
             return result;
         }
 
-//
+
 //        [Benchmark]
 //        public Uuid uuid_CtorPtr()
 //        {
@@ -353,7 +402,7 @@ namespace Uuid.Benchmarks
 //        {
 //            return new Guid(_guidStringD);
 //        }
-//        
+//
 //        [Benchmark]
 //        public Uuid uuid_CtorStringP()
 //        {
@@ -366,7 +415,7 @@ namespace Uuid.Benchmarks
 //        {
 //            return new Guid(_guidStringP);
 //        }
-//        
+//
 //        [Benchmark]
 //        public Uuid uuid_CtorStringB()
 //        {
@@ -379,7 +428,7 @@ namespace Uuid.Benchmarks
 //        {
 //            return new Guid(_guidStringB);
 //        }
-//        
+//
 //        [Benchmark]
 //        public Uuid uuid_CtorStringX()
 //        {
@@ -392,114 +441,39 @@ namespace Uuid.Benchmarks
 //        {
 //            return new Guid(_guidStringX);
 //        }
-
+//
+//        private const byte OLD_FLAG = 0;
+//        private const sbyte NEW_FLAG = 0;
+//
 //        [Benchmark]
-//        public void uuid_CtorStringN_100()
+//        public void uuid_TryParseN_1kk_Old()
 //        {
-//            foreach (var uuid in _randomUuidsN_100)
+//            for (var i = 0; i < _brokenRandomUuidsN_1_000_000.Length; i++)
 //            {
-//                var _ = new Uuid(uuid);
+//                var _ = Uuid.TryParse(_brokenRandomUuidsN_1_000_000[i], out var _);
 //            }
 //        }
 //
 //        [Benchmark]
-//        public void guid_CtorStringN_100()
+//        public void uuid_TryParseN_1kk_New()
 //        {
-//            foreach (var uuid in _randomUuidsN_100)
+//            for (var i = 0; i < _brokenRandomUuidsN_1_000_000.Length; i++)
 //            {
-//                var _ = new Guid(uuid);
-//            }
-//        }
-//
-//        [Benchmark]
-//        public void uuid_CtorStringN_1000()
-//        {
-//            foreach (var uuid in _randomUuidsN_1000)
-//            {
-//                var _ = new Uuid(uuid);
-//            }
-//        }
-//
-//        [Benchmark]
-//        public void guid_CtorStringN_1000()
-//        {
-//            foreach (var uuid in _randomUuidsN_1000)
-//            {
-//                var _ = new Guid(uuid);
-//            }
-//        }
-//
-//
-//        [Benchmark]
-//        public void uuid_CtorStringN_10_000()
-//        {
-//            foreach (var uuid in _randomUuidsN_10_000)
-//            {
-//                var _ = new Uuid(uuid);
-//            }
-//        }
-//
-//        [Benchmark]
-//        public void guid_CtorStringN_10_000()
-//        {
-//            foreach (var uuid in _randomUuidsN_10_000)
-//            {
-//                var _ = new Guid(uuid);
-//            }
-//        }
-//
-//        [Benchmark]
-//        public void uuid_CtorStringN_100_000()
-//        {
-//            foreach (var uuid in _randomUuidsN_100_000)
-//            {
-//                var _ = new Uuid(uuid);
-//            }
-//        }
-//
-//        [Benchmark]
-//        public void guid_CtorStringN_100_000()
-//        {
-//            foreach (var uuid in _randomUuidsN_100_000)
-//            {
-//                var _ = new Guid(uuid);
+//                var _ = Uuid.TryParseNew(_brokenRandomUuidsN_1_000_000[i], out var _);
 //            }
 //        }
 
-//        [Benchmark]
-//        public void uuid_ParseN_1_000_000()
-//        {
-//            foreach (var uuid in _randomUuidsN_1_000_000)
-//            {
-//                var _ = Uuid.Parse(uuid.AsSpan());
-//            }
-//        }
-//
-//        [Benchmark]
-//        public void guid_ParseN_1_000_000()
-//        {
-//            foreach (var uuid in _randomUuidsN_1_000_000)
-//            {
-//                var _ = Guid.Parse(uuid.AsSpan());
-//            }
-//        }
-//        
-//        [Benchmark]
-//        public void uuid_TryParseN_1_000_000()
-//        {
-//            foreach (var uuid in _randomUuidsN_1_000_000)
-//            {
-//                var _ = Uuid.TryParse(uuid.AsSpan(), out var _);
-//            }
-//        }
-//
-//        [Benchmark]
-//        public void guid_TryParseN_1_000_000()
-//        {
-//            foreach (var uuid in _randomUuidsN_1_000_000)
-//            {
-//                var _ = Guid.TryParse(uuid.AsSpan(), out var _);
-//            }
-//        }
+
+        [Benchmark]
+        public string uuid_ToString_N()
+        {
+            return _uuid.ToString("N");
+        }
+        
+        [Benchmark]
+        public string uuid_ToString_N_AVX()
+        {
+            return _uuid.ToString("M");
+        }
     }
 }
