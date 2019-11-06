@@ -3,6 +3,7 @@ using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Runtime.InteropServices;
+using Uuid.Benchmarks;
 
 namespace ConsoleApp1
 {
@@ -156,6 +157,9 @@ namespace ConsoleApp1
 
         public static void Main(string[] args)
         {
+            var bench = new UuidCtorBenchmarks();
+            bench.Setup();
+            var ttxxxx= 0;
             var parse = Uuid.Uuid.TryParseNew("11223344556677889900aabbccddeeff", out var parsed);
             var avxed = parsed.ToString("M");
 //            TableFromHexToBytes2 = (byte*) Marshal.AllocHGlobal(256).ToPointer();

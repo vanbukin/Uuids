@@ -250,7 +250,8 @@ namespace Uuid
             if (string.IsNullOrEmpty(format)) format = "D";
 
             if (format.Length != 1)
-                throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+                throw new FormatException(
+                    "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
 
             switch (format[0])
             {
@@ -272,17 +273,6 @@ namespace Uuid
                     fixed (char* uuidChars = uuidString)
                     {
                         FormatN(uuidChars);
-                    }
-
-                    return uuidString;
-                }
-                case 'M':
-                case 'm':
-                {
-                    var uuidString = FastAllocateString(32);
-                    fixed (char* uuidChars = uuidString)
-                    {
-                        FormatNAvx((byte*) uuidChars);
                     }
 
                     return uuidString;
@@ -321,7 +311,8 @@ namespace Uuid
                     return uuidString;
                 }
                 default:
-                    throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+                    throw new FormatException(
+                        "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
             }
         }
 
@@ -352,6 +343,19 @@ namespace Uuid
 
         private void FormatN(char* dest)
         {
+            if (Avx2.IsSupported)
+            {
+                FormatNAvx(dest);
+            }
+            else
+            {
+                FormatNTable(dest);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private void FormatNTable(char* dest)
+        {
             // dddddddddddddddddddddddddddddddd
             var destUints = (uint*) dest;
             destUints[0] = TableToHex[_byte0];
@@ -375,14 +379,15 @@ namespace Uuid
         private static Vector256<byte> ShuffleMask = Vector256.Create(
             255, 0, 255, 2, 255, 4, 255, 6, 255, 8, 255, 10, 255, 12, 255, 14,
             255, 0, 255, 2, 255, 4, 255, 6, 255, 8, 255, 10, 255, 12, 255, 14);
-        
+
 
         private static Vector256<byte> AsciiTable = Vector256.Create(
             (byte) 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102,
             48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 97, 98, 99, 100, 101, 102);
         // '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 
-        private void FormatNAvxWorks(short* dest)
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
+        private void FormatNAvx(char* dest)
         {
             // ddddddddddddddddddddddddddddddd
             fixed (Uuid* thisPtr = &this)
@@ -391,97 +396,11 @@ namespace Uuid
                 var hi = Avx2.ShiftRightLogical(uuidVector, 4).AsByte();
                 var lo = Avx2.Shuffle(uuidVector.AsByte(), ShuffleMask);
                 var asciiBytes = Avx2.Shuffle(AsciiTable, Avx2.And(Avx2.Or(hi, lo), Vector256.Create((byte) 15)));
-                Avx.Store(dest, Avx2.ConvertToVector256Int16(asciiBytes.GetLower()));
-                Avx.Store((dest + 8), Avx2.ConvertToVector256Int16(asciiBytes.GetUpper()));
-            }
-        }
-        
-        private static Vector256<byte> ShuffleMask2 = Vector256.Create(
-            255, 0, 255, 4, 255, 8, 255, 12, 255, 16, 255, 20, 255, 24, 255, 28,
-            255, 0, 255, 4, 255, 8, 255, 12, 255, 16, 255, 20, 255, 24, 255, 28);
-
-        internal static ReadOnlySpan<byte> s_lowerHexLookupTable => new byte[]
-        {
-            0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66
-        };
-
-        private static Vector128<byte> HexLookupTable =
-            Vector128.Create((byte) 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66);
-
-        private static Vector128<byte> ShiftMask = Vector128.Create((byte) 0x0F);
-        private static Vector128<byte> UnpackMask = Vector128.Create((byte) 0x00);
-
-        private static Vector256<byte> ShiftMask256 = Vector256.Create((byte) 0x0F);
-        private static Vector256<byte> UnpackMask256 = Vector256.Create((byte) 0x00);
-
-        private static Vector256<byte> HexLookupTable256 = Vector256.Create(
-            (byte) 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
-            0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66
-        );
-
-        private void FormatNAvx(byte* dest)
-        {
-            // ddddddddddddddddddddddddddddddd
-            fixed (Uuid* thisPtr = &this)
-            {
-                //var value = (Sse3.LoadDquVector128((byte*) thisPtr));
-
-                //var hiVector = value.GetUpper();
-
-                var uuidVector = Avx2.ConvertToVector256Int16(Sse3.LoadDquVector128((byte*) thisPtr));
-                var hiHalf = Avx2.ShiftRightLogical(uuidVector, 4).AsByte();
-                var loHalf = Avx2.Shuffle(uuidVector.AsByte(), ShuffleMask);
-
-                var sum = Avx2.Or(hiHalf, loHalf);
-                //var hiHalf = Avx2.And(hiShift, ShiftMask256);
-                //var loHalf = Avx2.And(value.AsByte(), ShiftMask256);
-
-                var shifted = Avx2.And(sum, ShiftMask256);
-
-                //var resHi = Avx2.Shuffle(HexLookupTable256);
-                var shuffle = Avx2.Shuffle(HexLookupTable256, shifted);
-
-                var hi = Avx2.UnpackHigh(shuffle, UnpackMask256);
-                var lo = Avx2.UnpackLow(shuffle, UnpackMask256);
-
-                Avx.Store(dest, lo);
-                Avx.Store(dest + 32, hi);
-                var tt = 0;
-
-                //var resHi = Avx2.Shuffle(HexLookupTable256, Avx2.UnpackHigh(hiHalf, loHalf));
-                // var resLo = Avx2.Shuffle(HexLookupTable256, Avx2.UnpackLow(hiHalf, loHalf));
-
-                //Avx.Store(dest, Avx2.UnpackLow(resLo, UnpackMask256));
-                // Avx.Store(dest + 32, Avx2.UnpackHigh(resHi, UnpackMask256));
-
-                //var resHi = Ssse3.Shuffle(HexLookupTable, Sse2.UnpackHigh(hiHalf, loHalf));
-                //var resLo = Ssse3.Shuffle(HexLookupTable, Sse2.UnpackLow(hiHalf, loHalf));
-//                Sse2.Store(dest, Sse2.UnpackLow(resLo, UnpackMask));
-//                Sse2.Store(dest + 16, Sse2.UnpackHigh(resLo, UnpackMask));
-//                Sse2.Store(dest + 32, Sse2.UnpackLow(resHi, UnpackMask));
-//                Sse2.Store(dest + 48, Sse2.UnpackHigh(resHi, UnpackMask));
+                Avx.Store((short*) dest, Avx2.ConvertToVector256Int16(asciiBytes.GetLower()));
+                Avx.Store(((short*) dest + 8), Avx2.ConvertToVector256Int16(asciiBytes.GetUpper()));
             }
         }
 
-        private void FormatNSse(byte* dest)
-        {
-            // ddddddddddddddddddddddddddddddd
-            fixed (Uuid* thisPtr = &this)
-            {
-                var value = Sse2.LoadVector128((byte*) thisPtr);
-
-                var hiShift = Sse2.ShiftRightLogical(value.AsInt16(), 4).AsByte();
-                var hiHalf = Sse2.And(hiShift, ShiftMask);
-                var loHalf = Sse2.And(value, ShiftMask);
-
-                var resHi = Ssse3.Shuffle(HexLookupTable, Sse2.UnpackHigh(hiHalf, loHalf));
-                var resLo = Ssse3.Shuffle(HexLookupTable, Sse2.UnpackLow(hiHalf, loHalf));
-                Sse2.Store(dest, Sse2.UnpackLow(resLo, UnpackMask));
-                Sse2.Store(dest + 16, Sse2.UnpackHigh(resLo, UnpackMask));
-                Sse2.Store(dest + 32, Sse2.UnpackLow(resHi, UnpackMask));
-                Sse2.Store(dest + 48, Sse2.UnpackHigh(resHi, UnpackMask));
-            }
-        }
 
         private void FormatB(char* dest)
         {
@@ -767,7 +686,8 @@ namespace Uuid
                 }
                 default:
                 {
-                    throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+                    throw new FormatException(
+                        "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
                 }
             }
         }
@@ -778,7 +698,8 @@ namespace Uuid
             if (input.IsEmpty)
                 throw new FormatException("Unrecognized Uuid format.");
             if (format.Length != 1)
-                throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+                throw new FormatException(
+                    "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
             var result = new Uuid();
             var resultPtr = (byte*) &result;
             switch ((char) (format[0] | 0x20))
@@ -830,7 +751,8 @@ namespace Uuid
                 }
                 default:
                 {
-                    throw new FormatException("Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
+                    throw new FormatException(
+                        "Format string can be only \"D\", \"d\", \"N\", \"n\", \"P\", \"p\", \"B\", \"b\", \"X\" or \"x\".");
                 }
             }
         }
@@ -1172,7 +1094,8 @@ namespace Uuid
             }
         }
 
-        private static bool ParseWithoutExceptionsNew(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        private static bool ParseWithoutExceptionsNew(ReadOnlySpan<char> uuidString, char* uuidStringPtr,
+            byte* resultPtr)
         {
             if ((uint) uuidString.Length == 0)
                 return false;
@@ -1198,19 +1121,24 @@ namespace Uuid
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool ParseWithoutExceptionsN2(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
+        private static bool ParseWithoutExceptionsN2(ReadOnlySpan<char> uuidString, char* uuidStringPtr,
+            byte* resultPtr)
         {
             return (uint) uuidString.Length == 32u && TryParsePtrN2((byte*) uuidStringPtr, resultPtr);
         }
 
         private static void ParseWithExceptionsD(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
-            if ((uint) uuidString.Length != 36u) throw new FormatException("Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
+            if ((uint) uuidString.Length != 36u)
+                throw new FormatException(
+                    "Uuid should contain 32 digits with 4 dashes xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx.");
 
-            if (uuidStringPtr[8] != '-' || uuidStringPtr[13] != '-' || uuidStringPtr[18] != '-' || uuidStringPtr[23] != '-')
+            if (uuidStringPtr[8] != '-' || uuidStringPtr[13] != '-' || uuidStringPtr[18] != '-' ||
+                uuidStringPtr[23] != '-')
                 throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
 
-            if (!TryParsePtrD(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            if (!TryParsePtrD(uuidStringPtr, resultPtr))
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsN(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
@@ -1219,7 +1147,8 @@ namespace Uuid
                 throw new FormatException(
                     "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
 
-            if (!TryParsePtrN(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            if (!TryParsePtrN(uuidStringPtr, resultPtr))
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsN2(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
@@ -1228,29 +1157,36 @@ namespace Uuid
                 throw new FormatException(
                     "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
 
-            if (!TryParsePtrN2((byte*) uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            if (!TryParsePtrN2((byte*) uuidStringPtr, resultPtr))
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsB(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 38u || uuidString[37] != '}')
-                throw new FormatException("Uuid should contain 32 digits with 4 dashes {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.");
+                throw new FormatException(
+                    "Uuid should contain 32 digits with 4 dashes {xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx}.");
 
-            if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
+            if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' ||
+                uuidStringPtr[24] != '-')
                 throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
 
-            if (!TryParsePtrPorB(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsP(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 38u || uuidString[37] != ')')
-                throw new FormatException("Uuid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
+                throw new FormatException(
+                    "Uuid should contain 32 digits with 4 dashes (xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx).");
 
-            if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' || uuidStringPtr[24] != '-')
+            if (uuidStringPtr[9] != '-' || uuidStringPtr[14] != '-' || uuidStringPtr[19] != '-' ||
+                uuidStringPtr[24] != '-')
                 throw new FormatException("Dashes are in the wrong position for Uuid parsing.");
 
-            if (!TryParsePtrPorB(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            if (!TryParsePtrPorB(uuidStringPtr, resultPtr))
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static void ParseWithExceptionsX(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
@@ -1298,7 +1234,8 @@ namespace Uuid
 
             if (uuidStringPtr[67] != '}') throw new FormatException("Could not find the ending brace.");
 
-            if (!TryParsePtrX(uuidStringPtr, resultPtr)) throw new FormatException("Uuid string should only contain hexadecimal characters.");
+            if (!TryParsePtrX(uuidStringPtr, resultPtr))
+                throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
         private static bool TryParsePtrD(char* value, byte* resultPtr)
@@ -1401,35 +1338,49 @@ namespace Uuid
                                                             && value[27] < MaximalChar
                                                             && (hexByteLow = TableFromHexToBytes[value[27]]) != 0xFF)
                                                         {
-                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                            resultPtr[11] =
+                                                                (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                             // 12 byte
                                                             if (value[28] < MaximalChar
                                                                 && (hexByteHi = TableFromHexToBytes[value[28]]) != 0xFF
                                                                 && value[29] < MaximalChar
-                                                                && (hexByteLow = TableFromHexToBytes[value[29]]) != 0xFF)
+                                                                && (hexByteLow = TableFromHexToBytes[value[29]]) !=
+                                                                0xFF)
                                                             {
-                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                resultPtr[12] =
+                                                                    (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                                 // 13 byte
                                                                 if (value[30] < MaximalChar
-                                                                    && (hexByteHi = TableFromHexToBytes[value[30]]) != 0xFF
+                                                                    && (hexByteHi = TableFromHexToBytes[value[30]]) !=
+                                                                    0xFF
                                                                     && value[31] < MaximalChar
-                                                                    && (hexByteLow = TableFromHexToBytes[value[31]]) != 0xFF)
+                                                                    && (hexByteLow = TableFromHexToBytes[value[31]]) !=
+                                                                    0xFF)
                                                                 {
-                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                    resultPtr[13] =
+                                                                        (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                                     // 14 byte
                                                                     if (value[32] < MaximalChar
-                                                                        && (hexByteHi = TableFromHexToBytes[value[32]]) != 0xFF
+                                                                        && (hexByteHi =
+                                                                            TableFromHexToBytes[value[32]]) != 0xFF
                                                                         && value[33] < MaximalChar
-                                                                        && (hexByteLow = TableFromHexToBytes[value[33]]) != 0xFF)
+                                                                        && (hexByteLow =
+                                                                            TableFromHexToBytes[value[33]]) != 0xFF)
                                                                     {
-                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                        resultPtr[14] =
+                                                                            (byte) ((byte) (hexByteHi << 4) | hexByteLow
+                                                                            );
                                                                         // 15 byte
                                                                         if (value[34] < MaximalChar
-                                                                            && (hexByteHi = TableFromHexToBytes[value[34]]) != 0xFF
+                                                                            && (hexByteHi =
+                                                                                TableFromHexToBytes[value[34]]) != 0xFF
                                                                             && value[35] < MaximalChar
-                                                                            && (hexByteLow = TableFromHexToBytes[value[35]]) != 0xFF)
+                                                                            && (hexByteLow =
+                                                                                TableFromHexToBytes[value[35]]) != 0xFF)
                                                                         {
-                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                            resultPtr[15] =
+                                                                                (byte) ((byte) (hexByteHi << 4) |
+                                                                                        hexByteLow);
                                                                             return true;
                                                                         }
                                                                     }
@@ -1539,35 +1490,49 @@ namespace Uuid
                                                             && value[23] < MaximalChar
                                                             && (hexByteLow = TableFromHexToBytes[value[23]]) != 0xFF)
                                                         {
-                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                            resultPtr[11] =
+                                                                (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                             // 12 byte
                                                             if (value[24] < MaximalChar
                                                                 && (hexByteHi = TableFromHexToBytes[value[24]]) != 0xFF
                                                                 && value[25] < MaximalChar
-                                                                && (hexByteLow = TableFromHexToBytes[value[25]]) != 0xFF)
+                                                                && (hexByteLow = TableFromHexToBytes[value[25]]) !=
+                                                                0xFF)
                                                             {
-                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                resultPtr[12] =
+                                                                    (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                                 // 13 byte
                                                                 if (value[26] < MaximalChar
-                                                                    && (hexByteHi = TableFromHexToBytes[value[26]]) != 0xFF
+                                                                    && (hexByteHi = TableFromHexToBytes[value[26]]) !=
+                                                                    0xFF
                                                                     && value[27] < MaximalChar
-                                                                    && (hexByteLow = TableFromHexToBytes[value[27]]) != 0xFF)
+                                                                    && (hexByteLow = TableFromHexToBytes[value[27]]) !=
+                                                                    0xFF)
                                                                 {
-                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                    resultPtr[13] =
+                                                                        (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                                     // 14 byte
                                                                     if (value[28] < MaximalChar
-                                                                        && (hexByteHi = TableFromHexToBytes[value[28]]) != 0xFF
+                                                                        && (hexByteHi =
+                                                                            TableFromHexToBytes[value[28]]) != 0xFF
                                                                         && value[29] < MaximalChar
-                                                                        && (hexByteLow = TableFromHexToBytes[value[29]]) != 0xFF)
+                                                                        && (hexByteLow =
+                                                                            TableFromHexToBytes[value[29]]) != 0xFF)
                                                                     {
-                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                        resultPtr[14] =
+                                                                            (byte) ((byte) (hexByteHi << 4) | hexByteLow
+                                                                            );
                                                                         // 15 byte
                                                                         if (value[30] < MaximalChar
-                                                                            && (hexByteHi = TableFromHexToBytes[value[30]]) != 0xFF
+                                                                            && (hexByteHi =
+                                                                                TableFromHexToBytes[value[30]]) != 0xFF
                                                                             && value[31] < MaximalChar
-                                                                            && (hexByteLow = TableFromHexToBytes[value[31]]) != 0xFF)
+                                                                            && (hexByteLow =
+                                                                                TableFromHexToBytes[value[31]]) != 0xFF)
                                                                         {
-                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                            resultPtr[15] =
+                                                                                (byte) ((byte) (hexByteHi << 4) |
+                                                                                        hexByteLow);
                                                                             return true;
                                                                         }
                                                                     }
@@ -1614,67 +1579,80 @@ namespace Uuid
 
             hexByteHi = TableFromHexToBytes2[value[12]];
             hexByteLow = TableFromHexToBytes2[value[14]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[13] | value[15]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[13] |
+                             value[15]);
             resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[16]];
             hexByteLow = TableFromHexToBytes2[value[18]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[17] | value[19]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[17] |
+                             value[19]);
             resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[20]];
             hexByteLow = TableFromHexToBytes2[value[22]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[21] | value[23]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[21] |
+                             value[23]);
             resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[24]];
             hexByteLow = TableFromHexToBytes2[value[26]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[25] | value[27]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[25] |
+                             value[27]);
             resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[28]];
             hexByteLow = TableFromHexToBytes2[value[30]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[29] | value[31]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[29] |
+                             value[31]);
             resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[32]];
             hexByteLow = TableFromHexToBytes2[value[34]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[33] | value[35]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[33] |
+                             value[35]);
             resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[36]];
             hexByteLow = TableFromHexToBytes2[value[38]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[37] | value[39]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[37] |
+                             value[39]);
             resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[40]];
             hexByteLow = TableFromHexToBytes2[value[42]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[41] | value[43]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[41] |
+                             value[43]);
             resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[44]];
             hexByteLow = TableFromHexToBytes2[value[46]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[45] | value[47]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[45] |
+                             value[47]);
             resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[48]];
             hexByteLow = TableFromHexToBytes2[value[50]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[49] | value[51]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[49] |
+                             value[51]);
             resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[52]];
             hexByteLow = TableFromHexToBytes2[value[54]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[53] | value[55]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[53] |
+                             value[55]);
             resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[56]];
             hexByteLow = TableFromHexToBytes2[value[58]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[57] | value[59]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[57] |
+                             value[59]);
             resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             hexByteHi = TableFromHexToBytes2[value[60]];
             hexByteLow = TableFromHexToBytes2[value[62]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[61] | value[63]);
+            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[61] |
+                             value[63]);
             resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
             return error == 0;
@@ -1782,35 +1760,49 @@ namespace Uuid
                                                             && value[28] < MaximalChar
                                                             && (hexByteLow = TableFromHexToBytes[value[28]]) != 0xFF)
                                                         {
-                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                            resultPtr[11] =
+                                                                (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                             // 12 byte
                                                             if (value[29] < MaximalChar
                                                                 && (hexByteHi = TableFromHexToBytes[value[29]]) != 0xFF
                                                                 && value[30] < MaximalChar
-                                                                && (hexByteLow = TableFromHexToBytes[value[30]]) != 0xFF)
+                                                                && (hexByteLow = TableFromHexToBytes[value[30]]) !=
+                                                                0xFF)
                                                             {
-                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                resultPtr[12] =
+                                                                    (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                                 // 13 byte
                                                                 if (value[31] < MaximalChar
-                                                                    && (hexByteHi = TableFromHexToBytes[value[31]]) != 0xFF
+                                                                    && (hexByteHi = TableFromHexToBytes[value[31]]) !=
+                                                                    0xFF
                                                                     && value[32] < MaximalChar
-                                                                    && (hexByteLow = TableFromHexToBytes[value[32]]) != 0xFF)
+                                                                    && (hexByteLow = TableFromHexToBytes[value[32]]) !=
+                                                                    0xFF)
                                                                 {
-                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                    resultPtr[13] =
+                                                                        (byte) ((byte) (hexByteHi << 4) | hexByteLow);
                                                                     // 14 byte
                                                                     if (value[33] < MaximalChar
-                                                                        && (hexByteHi = TableFromHexToBytes[value[33]]) != 0xFF
+                                                                        && (hexByteHi =
+                                                                            TableFromHexToBytes[value[33]]) != 0xFF
                                                                         && value[34] < MaximalChar
-                                                                        && (hexByteLow = TableFromHexToBytes[value[34]]) != 0xFF)
+                                                                        && (hexByteLow =
+                                                                            TableFromHexToBytes[value[34]]) != 0xFF)
                                                                     {
-                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                        resultPtr[14] =
+                                                                            (byte) ((byte) (hexByteHi << 4) | hexByteLow
+                                                                            );
                                                                         // 15 byte
                                                                         if (value[35] < MaximalChar
-                                                                            && (hexByteHi = TableFromHexToBytes[value[35]]) != 0xFF
+                                                                            && (hexByteHi =
+                                                                                TableFromHexToBytes[value[35]]) != 0xFF
                                                                             && value[36] < MaximalChar
-                                                                            && (hexByteLow = TableFromHexToBytes[value[36]]) != 0xFF)
+                                                                            && (hexByteLow =
+                                                                                TableFromHexToBytes[value[36]]) != 0xFF)
                                                                         {
-                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                            resultPtr[15] =
+                                                                                (byte) ((byte) (hexByteHi << 4) |
+                                                                                        hexByteLow);
                                                                             return true;
                                                                         }
                                                                     }
@@ -1955,7 +1947,8 @@ namespace Uuid
                                                             && value[45] < MaximalChar
                                                             && (hexByteLow = TableFromHexToBytes[value[45]]) != 0xFF)
                                                         {
-                                                            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                            resultPtr[11] =
+                                                                (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
                                                             // value[46] == ','
                                                             // value[47] == '0'
@@ -1965,9 +1958,11 @@ namespace Uuid
                                                             if (value[49] < MaximalChar
                                                                 && (hexByteHi = TableFromHexToBytes[value[49]]) != 0xFF
                                                                 && value[50] < MaximalChar
-                                                                && (hexByteLow = TableFromHexToBytes[value[50]]) != 0xFF)
+                                                                && (hexByteLow = TableFromHexToBytes[value[50]]) !=
+                                                                0xFF)
                                                             {
-                                                                resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                resultPtr[12] =
+                                                                    (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
                                                                 // value[51] == ','
                                                                 // value[52] == '0'
@@ -1975,11 +1970,14 @@ namespace Uuid
 
                                                                 // 13 byte
                                                                 if (value[54] < MaximalChar
-                                                                    && (hexByteHi = TableFromHexToBytes[value[54]]) != 0xFF
+                                                                    && (hexByteHi = TableFromHexToBytes[value[54]]) !=
+                                                                    0xFF
                                                                     && value[55] < MaximalChar
-                                                                    && (hexByteLow = TableFromHexToBytes[value[55]]) != 0xFF)
+                                                                    && (hexByteLow = TableFromHexToBytes[value[55]]) !=
+                                                                    0xFF)
                                                                 {
-                                                                    resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                    resultPtr[13] =
+                                                                        (byte) ((byte) (hexByteHi << 4) | hexByteLow);
 
                                                                     // value[56] == ','
                                                                     // value[57] == '0'
@@ -1987,11 +1985,15 @@ namespace Uuid
 
                                                                     // 14 byte
                                                                     if (value[59] < MaximalChar
-                                                                        && (hexByteHi = TableFromHexToBytes[value[59]]) != 0xFF
+                                                                        && (hexByteHi =
+                                                                            TableFromHexToBytes[value[59]]) != 0xFF
                                                                         && value[60] < MaximalChar
-                                                                        && (hexByteLow = TableFromHexToBytes[value[60]]) != 0xFF)
+                                                                        && (hexByteLow =
+                                                                            TableFromHexToBytes[value[60]]) != 0xFF)
                                                                     {
-                                                                        resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                        resultPtr[14] =
+                                                                            (byte) ((byte) (hexByteHi << 4) | hexByteLow
+                                                                            );
 
                                                                         // value[61] == ','
                                                                         // value[62] == '0'
@@ -1999,11 +2001,15 @@ namespace Uuid
 
                                                                         // 15 byte
                                                                         if (value[64] < MaximalChar
-                                                                            && (hexByteHi = TableFromHexToBytes[value[64]]) != 0xFF
+                                                                            && (hexByteHi =
+                                                                                TableFromHexToBytes[value[64]]) != 0xFF
                                                                             && value[65] < MaximalChar
-                                                                            && (hexByteLow = TableFromHexToBytes[value[65]]) != 0xFF)
+                                                                            && (hexByteLow =
+                                                                                TableFromHexToBytes[value[65]]) != 0xFF)
                                                                         {
-                                                                            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
+                                                                            resultPtr[15] =
+                                                                                (byte) ((byte) (hexByteHi << 4) |
+                                                                                        hexByteLow);
                                                                             return true;
                                                                         }
                                                                     }

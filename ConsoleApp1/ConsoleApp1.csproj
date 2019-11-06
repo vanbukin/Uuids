@@ -12,6 +12,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Uuid.Benchmarks\Uuid.Benchmarks.csproj" />
       <ProjectReference Include="..\Uuid\Uuid.csproj" />
     </ItemGroup>
 
