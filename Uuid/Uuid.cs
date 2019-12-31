@@ -36,7 +36,6 @@ namespace Uuid
             }
 
             TableFromHexToBytes = (byte*) Marshal.AllocHGlobal(103).ToPointer();
-            TableFromHexToBytes2 = (byte*) Marshal.AllocHGlobal(256).ToPointer();
             for (var i = 0; i < 103; i++)
                 TableFromHexToBytes[i] = (char) i switch
                 {
@@ -64,33 +63,6 @@ namespace Uuid
                     'F' => (byte) 0xf,
                     _ => byte.MaxValue
                 };
-            for (var i = 0; i < 256; i++)
-                TableFromHexToBytes2[i] = (char) i switch
-                {
-                    '0' => (byte) 0x0,
-                    '1' => (byte) 0x1,
-                    '2' => (byte) 0x2,
-                    '3' => (byte) 0x3,
-                    '4' => (byte) 0x4,
-                    '5' => (byte) 0x5,
-                    '6' => (byte) 0x6,
-                    '7' => (byte) 0x7,
-                    '8' => (byte) 0x8,
-                    '9' => (byte) 0x9,
-                    'a' => (byte) 0xa,
-                    'A' => (byte) 0xa,
-                    'b' => (byte) 0xb,
-                    'B' => (byte) 0xb,
-                    'c' => (byte) 0xc,
-                    'C' => (byte) 0xc,
-                    'd' => (byte) 0xd,
-                    'D' => (byte) 0xd,
-                    'e' => (byte) 0xe,
-                    'E' => (byte) 0xe,
-                    'f' => (byte) 0xf,
-                    'F' => (byte) 0xf,
-                    _ => ByteMask
-                };
 
 #nullable disable
             // ReSharper disable once PossibleNullReferenceException
@@ -101,11 +73,9 @@ namespace Uuid
         }
 
         private const ushort MaximalChar = 103;
-        private const byte ByteMask = 0b10000000;
 
         private static readonly uint* TableToHex;
         private static readonly byte* TableFromHexToBytes;
-        private static readonly byte* TableFromHexToBytes2;
         private static readonly Func<int, string> FastAllocateString;
 
         public static readonly Uuid Empty = new Uuid();
@@ -270,7 +240,7 @@ namespace Uuid
                 case 'n':
                 {
                     var uuidString = FastAllocateString(32);
-                    fixed (char* uuidChars = uuidString)
+                    fixed (char* uuidChars = &uuidString.GetPinnableReference())
                     {
                         FormatN(uuidChars);
                     }
@@ -397,7 +367,7 @@ namespace Uuid
                 var lo = Avx2.Shuffle(uuidVector.AsByte(), ShuffleMask);
                 var asciiBytes = Avx2.Shuffle(AsciiTable, Avx2.And(Avx2.Or(hi, lo), Vector256.Create((byte) 15)));
                 Avx.Store((short*) dest, Avx2.ConvertToVector256Int16(asciiBytes.GetLower()));
-                Avx.Store(((short*) dest + 8), Avx2.ConvertToVector256Int16(asciiBytes.GetUpper()));
+                Avx.Store((((short*) dest) + 16), Avx2.ConvertToVector256Int16(asciiBytes.GetUpper()));
             }
         }
 
@@ -502,57 +472,6 @@ namespace Uuid
             }
 
             this = result;
-        }
-
-        public Uuid(string input, byte oldflag)
-        {
-            if (input == null)
-                throw new ArgumentNullException(nameof(input));
-            var result = new Uuid();
-            var resultPtr = (byte*) &result;
-            fixed (char* uuidStringPtr = input)
-            {
-                ParseWithExceptions(input, uuidStringPtr, resultPtr);
-            }
-
-            this = result;
-        }
-
-        public Uuid(string input, sbyte newFlag)
-        {
-            if (input == null)
-                throw new ArgumentNullException(nameof(input));
-            var result = new Uuid();
-            var resultPtr = (byte*) &result;
-            fixed (char* uuidStringPtr = input)
-            {
-                ParseWithExceptionsNew(input, uuidStringPtr, resultPtr);
-            }
-
-            this = result;
-        }
-
-        public static bool TryParseNew(string? input, out Uuid output)
-        {
-            if (input == null)
-            {
-                output = default;
-                return false;
-            }
-
-            var result = new Uuid();
-            var resultPtr = (byte*) &result;
-            fixed (char* uuidStringPtr = input)
-            {
-                if (ParseWithoutExceptionsNew(input, uuidStringPtr, resultPtr))
-                {
-                    output = result;
-                    return true;
-                }
-            }
-
-            output = default;
-            return false;
         }
 
         public static Uuid Parse(string input)
@@ -691,7 +610,6 @@ namespace Uuid
                 }
             }
         }
-
 
         public static Uuid ParseExact(ReadOnlySpan<char> input, ReadOnlySpan<char> format)
         {
@@ -1057,76 +975,6 @@ namespace Uuid
             }
         }
 
-        private static void ParseWithExceptionsNew(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
-        {
-            if ((uint) uuidString.Length == 0)
-                throw new FormatException("Unrecognized Uuid format.");
-
-            switch (uuidString[0])
-            {
-                case '(':
-                {
-                    ParseWithExceptionsP(uuidString, uuidStringPtr, resultPtr);
-                    break;
-                }
-                case '{':
-                {
-                    if (uuidString.Contains('-'))
-                    {
-                        ParseWithExceptionsB(uuidString, uuidStringPtr, resultPtr);
-                        break;
-                    }
-
-                    ParseWithExceptionsX(uuidString, uuidStringPtr, resultPtr);
-                    break;
-                }
-                default:
-                {
-                    if (uuidString.Contains('-'))
-                    {
-                        ParseWithExceptionsD(uuidString, uuidStringPtr, resultPtr);
-                        break;
-                    }
-
-                    ParseWithExceptionsN2(uuidString, uuidStringPtr, resultPtr);
-                    break;
-                }
-            }
-        }
-
-        private static bool ParseWithoutExceptionsNew(ReadOnlySpan<char> uuidString, char* uuidStringPtr,
-            byte* resultPtr)
-        {
-            if ((uint) uuidString.Length == 0)
-                return false;
-            switch (uuidString[0])
-            {
-                case '(':
-                {
-                    return ParseWithoutExceptionsP(uuidString, uuidStringPtr, resultPtr);
-                }
-                case '{':
-                {
-                    return uuidString.Contains('-')
-                        ? ParseWithoutExceptionsB(uuidString, uuidStringPtr, resultPtr)
-                        : ParseWithoutExceptionsX(uuidString, uuidStringPtr, resultPtr);
-                }
-                default:
-                {
-                    return uuidString.Contains('-')
-                        ? ParseWithoutExceptionsD(uuidString, uuidStringPtr, resultPtr)
-                        : ParseWithoutExceptionsN2(uuidString, uuidStringPtr, resultPtr);
-                }
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private static bool ParseWithoutExceptionsN2(ReadOnlySpan<char> uuidString, char* uuidStringPtr,
-            byte* resultPtr)
-        {
-            return (uint) uuidString.Length == 32u && TryParsePtrN2((byte*) uuidStringPtr, resultPtr);
-        }
-
         private static void ParseWithExceptionsD(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 36u)
@@ -1148,16 +996,6 @@ namespace Uuid
                     "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
 
             if (!TryParsePtrN(uuidStringPtr, resultPtr))
-                throw new FormatException("Uuid string should only contain hexadecimal characters.");
-        }
-
-        private static void ParseWithExceptionsN2(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
-        {
-            if ((uint) uuidString.Length != 32u)
-                throw new FormatException(
-                    "Uuid should contain only 32 digits xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx.");
-
-            if (!TryParsePtrN2((byte*) uuidStringPtr, resultPtr))
                 throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
@@ -1552,110 +1390,6 @@ namespace Uuid
             }
 
             return false;
-        }
-
-        [SuppressMessage("ReSharper", "JoinDeclarationAndInitializer")]
-        private static bool TryParsePtrN2(byte* value, byte* resultPtr)
-        {
-            // e.g. "d85b1407351d4694939203acc5870eb1"
-
-            byte error = 0;
-            byte hexByteHi;
-            byte hexByteLow;
-            hexByteHi = TableFromHexToBytes2[value[0]];
-            hexByteLow = TableFromHexToBytes2[value[2]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[1] | value[3]);
-            resultPtr[0] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[4]];
-            hexByteLow = TableFromHexToBytes2[value[6]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[5] | value[7]);
-            resultPtr[1] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[8]];
-            hexByteLow = TableFromHexToBytes2[value[10]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[9] | value[11]);
-            resultPtr[2] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[12]];
-            hexByteLow = TableFromHexToBytes2[value[14]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[13] |
-                             value[15]);
-            resultPtr[3] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[16]];
-            hexByteLow = TableFromHexToBytes2[value[18]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[17] |
-                             value[19]);
-            resultPtr[4] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[20]];
-            hexByteLow = TableFromHexToBytes2[value[22]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[21] |
-                             value[23]);
-            resultPtr[5] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[24]];
-            hexByteLow = TableFromHexToBytes2[value[26]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[25] |
-                             value[27]);
-            resultPtr[6] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[28]];
-            hexByteLow = TableFromHexToBytes2[value[30]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[29] |
-                             value[31]);
-            resultPtr[7] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[32]];
-            hexByteLow = TableFromHexToBytes2[value[34]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[33] |
-                             value[35]);
-            resultPtr[8] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[36]];
-            hexByteLow = TableFromHexToBytes2[value[38]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[37] |
-                             value[39]);
-            resultPtr[9] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[40]];
-            hexByteLow = TableFromHexToBytes2[value[42]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[41] |
-                             value[43]);
-            resultPtr[10] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[44]];
-            hexByteLow = TableFromHexToBytes2[value[46]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[45] |
-                             value[47]);
-            resultPtr[11] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[48]];
-            hexByteLow = TableFromHexToBytes2[value[50]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[49] |
-                             value[51]);
-            resultPtr[12] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[52]];
-            hexByteLow = TableFromHexToBytes2[value[54]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[53] |
-                             value[55]);
-            resultPtr[13] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[56]];
-            hexByteLow = TableFromHexToBytes2[value[58]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[57] |
-                             value[59]);
-            resultPtr[14] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            hexByteHi = TableFromHexToBytes2[value[60]];
-            hexByteLow = TableFromHexToBytes2[value[62]];
-            error |= (byte) (((byte) (hexByteHi & ByteMask)) | ((byte) (hexByteLow & ByteMask)) | value[61] |
-                             value[63]);
-            resultPtr[15] = (byte) ((byte) (hexByteHi << 4) | hexByteLow);
-
-            return error == 0;
         }
 
         private static bool TryParsePtrPorB(char* value, byte* resultPtr)
