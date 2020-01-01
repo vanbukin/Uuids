@@ -24,7 +24,7 @@ namespace Uuid
     [SuppressMessage("ReSharper", "FieldCanBeMadeReadOnly.Global")]
     [SuppressMessage("ReSharper", "CommentTypo")]
     [SuppressMessage("ReSharper", "HeapView.ObjectAllocation.Evident")]
-    public unsafe struct Uuid : IFormattable, IComparable, IComparable<Uuid>, IEquatable<Uuid>
+    public unsafe partial struct Uuid : IFormattable, IComparable, IComparable<Uuid>, IEquatable<Uuid>
     {
         static Uuid()
         {
@@ -69,6 +69,13 @@ namespace Uuid
             FastAllocateString = (Func<int, string>) typeof(string)
                 .GetMethod(nameof(FastAllocateString), BindingFlags.Static | BindingFlags.NonPublic)
                 .CreateDelegate(typeof(Func<int, string>));
+            // ReSharper disable once PossibleNullReferenceException
+            // ReSharper disable once RedundantNameQualifier
+            GetRandomBytes = (GetBytesDelegate) typeof(System.Runtime.InteropServices.GuidAttribute).Assembly
+                .GetType("Interop", true, false)
+                .GetMethod(nameof(GetRandomBytes), BindingFlags.Static | BindingFlags.NonPublic)
+                .CreateDelegate(typeof(GetBytesDelegate));
+            
 #nullable restore
         }
 
@@ -77,6 +84,9 @@ namespace Uuid
         private static readonly uint* TableToHex;
         private static readonly byte* TableFromHexToBytes;
         private static readonly Func<int, string> FastAllocateString;
+        private static readonly GetBytesDelegate GetRandomBytes;
+
+        delegate void GetBytesDelegate(byte* buffer, int length);
 
         public static readonly Uuid Empty = new Uuid();
 
