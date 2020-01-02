@@ -1,7 +1,4 @@
 using System;
-using System.Linq;
-using System.Numerics;
-using System.Reflection;
 
 namespace Uuid
 {
@@ -37,7 +34,7 @@ namespace Uuid
         private static Uuid GenerateUuidVersion1()
         {
             var result = stackalloc byte[16];
-            GetRandomBytes(result + 8, 8);
+            CoreLib.Internal.GetRandomBytes(result + 8, 8);
             var currentTicks = DateTime.UtcNow.Ticks - ChristianCalendarGregorianReformTicksDate;
             var ticksPtr = (byte*) &currentTicks;
             result[0] = ticksPtr[3];

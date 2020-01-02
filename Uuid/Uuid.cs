@@ -63,28 +63,12 @@ namespace Uuid
                     'F' => (byte) 0xf,
                     _ => byte.MaxValue
                 };
-
-#nullable disable
-            // ReSharper disable once PossibleNullReferenceException
-            FastAllocateString = (Func<int, string>) typeof(string)
-                .GetMethod(nameof(FastAllocateString), BindingFlags.Static | BindingFlags.NonPublic)
-                .CreateDelegate(typeof(Func<int, string>));
-            // ReSharper disable once PossibleNullReferenceException
-            // ReSharper disable once RedundantNameQualifier
-            GetRandomBytes = (GetBytesDelegate) typeof(System.Runtime.InteropServices.GuidAttribute).Assembly
-                .GetType("Interop", true, false)
-                .GetMethod(nameof(GetRandomBytes), BindingFlags.Static | BindingFlags.NonPublic)
-                .CreateDelegate(typeof(GetBytesDelegate));
-            
-#nullable restore
         }
 
         private const ushort MaximalChar = 103;
 
         private static readonly uint* TableToHex;
         private static readonly byte* TableFromHexToBytes;
-        private static readonly Func<int, string> FastAllocateString;
-        private static readonly GetBytesDelegate GetRandomBytes;
 
         delegate void GetBytesDelegate(byte* buffer, int length);
 
@@ -238,7 +222,7 @@ namespace Uuid
                 case 'D':
                 case 'd':
                 {
-                    var uuidString = FastAllocateString(36);
+                    var uuidString = CoreLib.Internal.FastAllocateString(36);
                     fixed (char* uuidChars = uuidString)
                     {
                         FormatD(uuidChars);
@@ -249,7 +233,7 @@ namespace Uuid
                 case 'N':
                 case 'n':
                 {
-                    var uuidString = FastAllocateString(32);
+                    var uuidString = CoreLib.Internal.FastAllocateString(32);
                     fixed (char* uuidChars = &uuidString.GetPinnableReference())
                     {
                         FormatN(uuidChars);
@@ -260,7 +244,7 @@ namespace Uuid
                 case 'B':
                 case 'b':
                 {
-                    var uuidString = FastAllocateString(38);
+                    var uuidString = CoreLib.Internal.FastAllocateString(38);
                     fixed (char* uuidChars = uuidString)
                     {
                         FormatB(uuidChars);
@@ -271,7 +255,7 @@ namespace Uuid
                 case 'P':
                 case 'p':
                 {
-                    var uuidString = FastAllocateString(38);
+                    var uuidString = CoreLib.Internal.FastAllocateString(38);
                     fixed (char* uuidChars = uuidString)
                     {
                         FormatP(uuidChars);
@@ -282,7 +266,7 @@ namespace Uuid
                 case 'X':
                 case 'x':
                 {
-                    var uuidString = FastAllocateString(68);
+                    var uuidString = CoreLib.Internal.FastAllocateString(68);
                     fixed (char* uuidChars = uuidString)
                     {
                         FormatX(uuidChars);
@@ -296,6 +280,7 @@ namespace Uuid
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private void FormatD(char* dest)
         {
             // dddddddd-dddd-dddd-dddd-dddddddddddd
@@ -321,8 +306,10 @@ namespace Uuid
             uintDest[10] = TableToHex[_byte9];
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private void FormatN(char* dest)
         {
+            // dddddddddddddddddddddddddddddddd
             if (Avx2.IsSupported)
             {
                 FormatNAvx(dest);
@@ -381,7 +368,7 @@ namespace Uuid
             }
         }
 
-
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private void FormatB(char* dest)
         {
             // {dddddddd-dddd-dddd-dddd-dddddddddddd}
@@ -409,6 +396,7 @@ namespace Uuid
             destUints[17] = TableToHex[_byte15];
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private void FormatP(char* dest)
         {
             // (dddddddd-dddd-dddd-dddd-dddddddddddd)
@@ -440,6 +428,7 @@ namespace Uuid
         private const uint CommaBrace = 8060972; // ,{
         private const uint CloseBraces = 8192125; // }}
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private void FormatX(char* dest)
         {
             // {0xdddddddd,0xdddd,0xdddd,{0xdd,0xdd,0xdd,0xdd,0xdd,0xdd,0xdd,0xdd}}
@@ -852,7 +841,7 @@ namespace Uuid
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool ParseWithoutExceptionsD(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 36u)
@@ -867,13 +856,13 @@ namespace Uuid
             return TryParsePtrD(uuidStringPtr, resultPtr);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool ParseWithoutExceptionsN(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             return (uint) uuidString.Length == 32u && TryParsePtrN(uuidStringPtr, resultPtr);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool ParseWithoutExceptionsB(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 38u)
@@ -888,7 +877,7 @@ namespace Uuid
             return TryParsePtrPorB(uuidStringPtr, resultPtr);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool ParseWithoutExceptionsP(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 38u)
@@ -903,7 +892,7 @@ namespace Uuid
             return TryParsePtrPorB(uuidStringPtr, resultPtr);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool ParseWithoutExceptionsX(ReadOnlySpan<char> uuidString, char* uuidStringPtr, byte* resultPtr)
         {
             if ((uint) uuidString.Length != 68u)
@@ -1086,6 +1075,7 @@ namespace Uuid
                 throw new FormatException("Uuid string should only contain hexadecimal characters.");
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool TryParsePtrD(char* value, byte* resultPtr)
         {
             // e.g. "d85b1407-351d-4694-9392-03acc5870eb1"
@@ -1250,6 +1240,7 @@ namespace Uuid
             return false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool TryParsePtrN(char* value, byte* resultPtr)
         {
             // e.g. "d85b1407351d4694939203acc5870eb1"
@@ -1402,6 +1393,7 @@ namespace Uuid
             return false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool TryParsePtrPorB(char* value, byte* resultPtr)
         {
             // e.g. "{d85b1407-351d-4694-9392-03acc5870eb1}"
@@ -1568,6 +1560,7 @@ namespace Uuid
             return false;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
         private static bool TryParsePtrX(char* value, byte* resultPtr)
         {
             // e.g. "{0xd85b1407,0x351d,0x4694,{0x93,0x92,0x03,0xac,0xc5,0x87,0x0e,0xb1}}"

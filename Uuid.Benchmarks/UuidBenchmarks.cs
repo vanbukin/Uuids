@@ -1,5 +1,3 @@
-using System;
-using System.Runtime.InteropServices;
 using BenchmarkDotNet.Attributes;
 
 namespace Uuid.Benchmarks
