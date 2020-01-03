@@ -6,13 +6,15 @@
         <LangVersion>8.0</LangVersion>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-        <AssemblyVersion>1.0.0</AssemblyVersion>
-        <FileVersion>1.0.0</FileVersion>
         <Version>1.0.0</Version>
         <Authors>Roman Bukin</Authors>
         <PackageId>Uuids</PackageId>
         <Description>Fast Uuid implementation</Description>
         <PackageProjectUrl>https://github.com/vanbukin/Uuids</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/vanbukin/Uuids.git</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <NoWarn>$(NoWarn);NU5125</NoWarn>
         <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
