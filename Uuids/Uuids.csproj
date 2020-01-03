@@ -6,10 +6,24 @@
         <LangVersion>8.0</LangVersion>
         <Nullable>enable</Nullable>
         <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+        <Version>1.0.0</Version>
+        <Authors>Roman Bukin</Authors>
+        <PackageId>Uuids</PackageId>
+        <Description>Fast Uuid implementation</Description>
+        <PackageProjectUrl>https://github.com/vanbukin/Uuids</PackageProjectUrl>
+        <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);CopyProjectReferencesToPackage</TargetsForTfmSpecificBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\Uuids.CoreLib\Uuids.CoreLib.ilproj"/>
+        <ProjectReference Include="..\Uuids.CoreLib\Uuids.CoreLib.ilproj">
+            <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+            <IncludeAssets>Uuids.CoreLib.dll</IncludeAssets>
+        </ProjectReference>
     </ItemGroup>
 
+    <Target DependsOnTargets="ResolveReferences" Name="CopyProjectReferencesToPackage">
+        <ItemGroup>
+            <BuildOutputInPackage Include="@(ReferenceCopyLocalPaths-&gt;WithMetadataValue('ReferenceSourceTarget', 'ProjectReference'))"/>
+        </ItemGroup>
+    </Target>
 </Project>
