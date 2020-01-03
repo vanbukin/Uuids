@@ -1,7 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 
-namespace Uuid.Tests
+namespace Uuids.Tests
 {
     [SuppressMessage("ReSharper", "HeapView.ObjectAllocation.Evident")]
     public static class TestData

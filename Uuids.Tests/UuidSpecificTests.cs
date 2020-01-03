@@ -1,21 +1,15 @@
 using System;
 using NUnit.Framework;
 
-namespace Uuid.Tests
+namespace Uuids.Tests
 {
     public class UuidSpecificTests
     {
-        private byte[] _uuidBytes;
-
-        [OneTimeSetUp]
-        public void Setup()
+        //0a141e28-323c-4650-5a64-6e78828c96a0
+        private readonly byte[] _uuidBytes =
         {
-            //0a141e28-323c-4650-5a64-6e78828c96a0
-            _uuidBytes = new byte[]
-            {
-                10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160
-            };
-        }
+            10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120, 130, 140, 150, 160
+        };
 
         [Test]
         public unsafe void Ctor_From_Ptr_IsOk()

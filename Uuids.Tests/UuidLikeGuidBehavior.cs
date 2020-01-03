@@ -3,7 +3,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using NUnit.Framework;
 
-namespace Uuid.Tests
+namespace Uuids.Tests
 {
     [SuppressMessage("ReSharper", "HeapView.ClosureAllocation")]
     [SuppressMessage("ReSharper", "HeapView.DelegateAllocation")]
@@ -61,17 +61,17 @@ namespace Uuid.Tests
         [SuppressMessage("ReSharper", "ExpressionIsAlwaysNull")]
         public void Ctor_From_ByteArray_Null_SameAsGuid()
         {
-            byte[] bytes = null;
+            byte[]? bytes = null;
 
             Assert.Multiple(() =>
             {
                 Assert.Throws<ArgumentNullException>(() =>
                 {
-                    var _ = new Guid(bytes);
+                    var _ = new Guid(bytes!);
                 });
                 Assert.Throws<ArgumentNullException>(() =>
                 {
-                    var _ = new Uuid(bytes);
+                    var _ = new Uuid(bytes!);
                 });
             });
         }
@@ -81,17 +81,17 @@ namespace Uuid.Tests
         [SuppressMessage("ReSharper", "ExpressionIsAlwaysNull")]
         public void Ctor_From_String_Null_SameAsGuid()
         {
-            string str = null;
+            string? str = null;
 
             Assert.Multiple(() =>
             {
                 Assert.Throws<ArgumentNullException>(() =>
                 {
-                    var _ = new Guid(str);
+                    var _ = new Guid(str!);
                 });
                 Assert.Throws<ArgumentNullException>(() =>
                 {
-                    var _ = new Uuid(str);
+                    var _ = new Uuid(str!);
                 });
             });
         }

@@ -1,12 +1,11 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
-using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 
-namespace Uuid
+namespace Uuids
 {
     [StructLayout(LayoutKind.Explicit, Pack = 1)]
     [SuppressMessage("ReSharper", "InconsistentNaming")]
@@ -70,11 +69,8 @@ namespace Uuid
         private static readonly uint* TableToHex;
         private static readonly byte* TableFromHexToBytes;
 
-        delegate void GetBytesDelegate(byte* buffer, int length);
-
         public static readonly Uuid Empty = new Uuid();
-
-
+        
         [FieldOffset(0)] private byte _byte0;
         [FieldOffset(1)] private byte _byte1;
         [FieldOffset(2)] private byte _byte2;
@@ -432,31 +428,31 @@ namespace Uuid
         private void FormatX(char* dest)
         {
             // {0xdddddddd,0xdddd,0xdddd,{0xdd,0xdd,0xdd,0xdd,0xdd,0xdd,0xdd,0xdd}}
-            var uintDest = (uint*) dest;
-            var uintDestAsChars = (char**) &uintDest;
+            var destUints = (uint*) dest;
+            var uintDestAsChars = (char**) &destUints;
             dest[0] = '{';
             dest[11] = dest[18] = dest[31] = dest[36] = dest[41] = dest[46] = dest[51] = dest[56] = dest[61] = ',';
-            uintDest[6] = uintDest[16] = uintDest[21] = uintDest[26] = uintDest[31] = ZeroX; // 0x
-            uintDest[7] = TableToHex[_byte4];
-            uintDest[8] = TableToHex[_byte5];
-            uintDest[17] = TableToHex[_byte9];
-            uintDest[22] = TableToHex[_byte11];
-            uintDest[27] = TableToHex[_byte13];
-            uintDest[32] = TableToHex[_byte15];
-            uintDest[33] = CloseBraces; // }}
+            destUints[6] = destUints[16] = destUints[21] = destUints[26] = destUints[31] = ZeroX; // 0x
+            destUints[7] = TableToHex[_byte4];
+            destUints[8] = TableToHex[_byte5];
+            destUints[17] = TableToHex[_byte9];
+            destUints[22] = TableToHex[_byte11];
+            destUints[27] = TableToHex[_byte13];
+            destUints[32] = TableToHex[_byte15];
+            destUints[33] = CloseBraces; // }}
             *uintDestAsChars += 1;
-            uintDest[0] = uintDest[9] = uintDest[13] = uintDest[18] = uintDest[23] = uintDest[28] = ZeroX; // 0x
-            uintDest[1] = TableToHex[_byte0];
-            uintDest[2] = TableToHex[_byte1];
-            uintDest[3] = TableToHex[_byte2];
-            uintDest[4] = TableToHex[_byte3];
-            uintDest[10] = TableToHex[_byte6];
-            uintDest[11] = TableToHex[_byte7];
-            uintDest[12] = CommaBrace; // ,{
-            uintDest[14] = TableToHex[_byte8];
-            uintDest[19] = TableToHex[_byte10];
-            uintDest[24] = TableToHex[_byte12];
-            uintDest[29] = TableToHex[_byte14];
+            destUints[0] = destUints[9] = destUints[13] = destUints[18] = destUints[23] = destUints[28] = ZeroX; // 0x
+            destUints[1] = TableToHex[_byte0];
+            destUints[2] = TableToHex[_byte1];
+            destUints[3] = TableToHex[_byte2];
+            destUints[4] = TableToHex[_byte3];
+            destUints[10] = TableToHex[_byte6];
+            destUints[11] = TableToHex[_byte7];
+            destUints[12] = CommaBrace; // ,{
+            destUints[14] = TableToHex[_byte8];
+            destUints[19] = TableToHex[_byte10];
+            destUints[24] = TableToHex[_byte12];
+            destUints[29] = TableToHex[_byte14];
         }
 
         public Uuid(string input)

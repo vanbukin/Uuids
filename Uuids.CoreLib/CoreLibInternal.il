@@ -10,7 +10,7 @@
   .ver 4:0:0:0
 }
 
-.assembly Uuid.CoreLib
+.assembly Uuids.CoreLib
 {
   .ver 1:0:0:0
 
@@ -20,10 +20,10 @@
   )
 }
 
-.module Uuid.CoreLib.dll
+.module Uuids.CoreLib.dll
 
 .class public abstract sealed auto ansi beforefieldinit
-  Uuid.CoreLib.Internal
+  Uuids.CoreLib.Internal
     extends [System.Runtime]System.Object
 {
 
@@ -39,7 +39,7 @@
     call         void [System.Private.CoreLib]Interop::GetRandomBytes(unsigned int8*, int32)
     ret
 
-  } // end of method Uuid.CoreLib.Internal::GetRandomBytes
+  } // end of method Uuids.CoreLib.Internal::GetRandomBytes
   
   .method public hidebysig static string
     FastAllocateString(
@@ -50,8 +50,8 @@
     ldarg.0      // length
     call         string System.String::FastAllocateString(int32)
     ret
-  } // Uuid.CoreLib.Internal::FastAllocateString
-} // end of class Uuid.CoreLib.Internal
+  } // Uuids.CoreLib.Internal::FastAllocateString
+} // end of class Uuids.CoreLib.Internal
 
 .class public auto ansi beforefieldinit
   System.Runtime.CompilerServices.IgnoresAccessChecksToAttribute

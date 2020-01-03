@@ -1,8 +1,9 @@
 using System;
 using BenchmarkDotNet.Attributes;
 
-namespace Uuid.Benchmarks
+namespace Uuids.Benchmarks
 {
+    [MemoryDiagnoser]
     public class UuidGeneratorBenchmarks
     {
         [Benchmark]
@@ -14,7 +15,7 @@ namespace Uuid.Benchmarks
         [Benchmark]
         public void uuid_NewUuid()
         {
-            var _ = Uuid.NewUuid();
+            var _ = Uuid.NewTimeBased();
         }
     }
 }
