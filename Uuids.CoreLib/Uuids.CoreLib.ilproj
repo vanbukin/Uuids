@@ -4,7 +4,6 @@
     <PropertyGroup>
         <TargetFramework>netcoreapp3.1</TargetFramework>
         <MicrosoftNetCoreIlasmPackageVersion>3.0.0-preview-27318-01</MicrosoftNetCoreIlasmPackageVersion>
-        <Version>1.0.0</Version>
     </PropertyGroup>
 
 </Project>
