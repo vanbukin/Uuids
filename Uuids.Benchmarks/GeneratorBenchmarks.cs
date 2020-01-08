@@ -5,6 +5,7 @@ using BenchmarkDotNet.Configs;
 
 namespace Uuids.Benchmarks
 {
+    [GcServer(true)]
     [MemoryDiagnoser]
     [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
     [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
