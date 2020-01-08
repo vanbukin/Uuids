@@ -1,22 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.InteropServices;
 using BenchmarkDotNet.Attributes;
+using BenchmarkDotNet.Configs;
 
 namespace Uuids.Benchmarks
 {
     [SuppressMessage("ReSharper", "InconsistentNaming")]
-    [SuppressMessage("ReSharper", "RedundantArrayCreationExpression")]
-    public unsafe class UuidTryParseBenchmarks
+    [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
+    [MemoryDiagnoser]
+    [GroupBenchmarksBy(BenchmarkLogicalGroupRule.ByCategory)]
+    [CategoriesColumn]
+    public unsafe class TryParseBenchmarks
     {
-        private string[] _sometimesBrokenRandomUuidsP_1_000_000 = new string[] { };
-        private string[] _sometimesBrokenRandomUuidsB_1_000_000 = new string[] { };
-        private string[] _sometimesBrokenRandomUuidsX_1_000_000 = new string[] { };
-        private string[] _sometimesBrokenRandomUuidsD_1_000_000 = new string[] { };
-        private string[] _sometimesBrokenRandomUuidsN_1_000_000 = new string[] { };
-
-        [GlobalSetup]
-        public void Setup()
+        static TryParseBenchmarks()
         {
             _sometimesBrokenRandomUuidsP_1_000_000 = GenerateSometimesBrokenGuidsPStringsArray(1_000_000);
             _sometimesBrokenRandomUuidsB_1_000_000 = GenerateSometimesBrokenGuidsBStringsArray(1_000_000);
@@ -25,102 +23,155 @@ namespace Uuids.Benchmarks
             _sometimesBrokenRandomUuidsN_1_000_000 = GenerateSometimesBrokenGuidsNStringsArray(1_000_000);
         }
 
+        private static readonly string[] _sometimesBrokenRandomUuidsP_1_000_000;
+        private static readonly string[] _sometimesBrokenRandomUuidsB_1_000_000;
+        private static readonly string[] _sometimesBrokenRandomUuidsX_1_000_000;
+        private static readonly string[] _sometimesBrokenRandomUuidsD_1_000_000;
+        private static readonly string[] _sometimesBrokenRandomUuidsN_1_000_000;
+
+        public static IEnumerable<object> ArgsP()
+        {
+            yield return _sometimesBrokenRandomUuidsP_1_000_000;
+        }
+
+        public static IEnumerable<object> ArgsB()
+        {
+            yield return _sometimesBrokenRandomUuidsB_1_000_000;
+        }
+
+        public static IEnumerable<object> ArgsX()
+        {
+            yield return _sometimesBrokenRandomUuidsX_1_000_000;
+        }
+
+        public static IEnumerable<object> ArgsD()
+        {
+            yield return _sometimesBrokenRandomUuidsD_1_000_000;
+        }
+
+        public static IEnumerable<object> ArgsN()
+        {
+            yield return _sometimesBrokenRandomUuidsN_1_000_000;
+        }
+
         // P
-        [Benchmark]
-        public void uuid_TryParseP_1kk()
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseP")]
+        [ArgumentsSource(nameof(ArgsP))]
+        public void guid_TryParse_P(string[] possibleBrokenStrings)
         {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsP_1_000_000)
+            foreach (var possibleBrokenString in possibleBrokenStrings)
             {
-                var _ = Uuid.TryParse(brokenString, out var _);
+                var _ = Guid.TryParse(possibleBrokenString, out var _);
             }
         }
-
-        [Benchmark]
-        public void guid_TryParseP_1kk()
+        
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseP")]
+        [ArgumentsSource(nameof(ArgsP))]
+        public void uuid_TryParse_P(string[] possibleBrokenStrings)
         {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsP_1_000_000)
+            foreach (var possibleBrokenString in possibleBrokenStrings)
             {
-                var _ = Guid.TryParse(brokenString, out var _);
+                var _ = Uuid.TryParse(possibleBrokenString, out var _);
             }
         }
-
+        
         // B
-        [Benchmark]
-        public void uuid_TryParseB_1kk()
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseB")]
+        [ArgumentsSource(nameof(ArgsB))]
+        public void guid_TryParse_B(string[] possibleBrokenStrings)
         {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsB_1_000_000)
+            foreach (var possibleBrokenString in possibleBrokenStrings)
             {
-                var _ = Uuid.TryParse(brokenString, out var _);
+                var _ = Guid.TryParse(possibleBrokenString, out var _);
             }
         }
-
-        [Benchmark]
-        public void guid_TryParseB_1kk()
+        
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseB")]
+        [ArgumentsSource(nameof(ArgsB))]
+        public void uuid_TryParse_B(string[] possibleBrokenStrings)
         {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsB_1_000_000)
+            foreach (var possibleBrokenString in possibleBrokenStrings)
             {
-                var _ = Guid.TryParse(brokenString, out var _);
+                var _ = Uuid.TryParse(possibleBrokenString, out var _);
             }
         }
-
+        
         // X
-        [Benchmark]
-        public void uuid_TryParseX_1kk()
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseX")]
+        [ArgumentsSource(nameof(ArgsX))]
+        public void guid_TryParse_X(string[] possibleBrokenStrings)
         {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsX_1_000_000)
+            foreach (var possibleBrokenString in possibleBrokenStrings)
             {
-                var _ = Uuid.TryParse(brokenString, out var _);
+                var _ = Guid.TryParse(possibleBrokenString, out var _);
             }
         }
-
-        [Benchmark]
-        public void guid_TryParseX_1kk()
+        
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseX")]
+        [ArgumentsSource(nameof(ArgsX))]
+        public void uuid_TryParse_X(string[] possibleBrokenStrings)
         {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsX_1_000_000)
+            foreach (var possibleBrokenString in possibleBrokenStrings)
             {
-                var _ = Guid.TryParse(brokenString, out var _);
+                var _ = Uuid.TryParse(possibleBrokenString, out var _);
             }
         }
 
         // D
-        [Benchmark]
-        public void uuid_TryParseD_1kk()
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseD")]
+        [ArgumentsSource(nameof(ArgsD))]
+        public void guid_TryParse_D(string[] possibleBrokenStrings)
         {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsD_1_000_000)
+            foreach (var possibleBrokenString in possibleBrokenStrings)
             {
-                var _ = Uuid.TryParse(brokenString, out var _);
+                var _ = Guid.TryParse(possibleBrokenString, out var _);
             }
         }
-
-        [Benchmark]
-        public void guid_TryParseD_1kk()
+        
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseD")]
+        [ArgumentsSource(nameof(ArgsD))]
+        public void uuid_TryParse_D(string[] possibleBrokenStrings)
         {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsD_1_000_000)
+            foreach (var possibleBrokenString in possibleBrokenStrings)
             {
-                var _ = Guid.TryParse(brokenString, out var _);
+                var _ = Uuid.TryParse(possibleBrokenString, out var _);
             }
         }
-
+        
         // N
-        [Benchmark]
-        public void uuid_TryParseN_1kk()
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseN")]
+        [ArgumentsSource(nameof(ArgsN))]
+        public void guid_TryParse_N(string[] possibleBrokenStrings)
         {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsN_1_000_000)
+            foreach (var possibleBrokenString in possibleBrokenStrings)
             {
-                var _ = Uuid.TryParse(brokenString, out var _);
+                var _ = Guid.TryParse(possibleBrokenString, out var _);
+            }
+        }
+        
+        [Benchmark(OperationsPerInvoke = 1_000_000)]
+        [BenchmarkCategory("TryParseN")]
+        [ArgumentsSource(nameof(ArgsN))]
+        public void uuid_TryParse_N(string[] possibleBrokenStrings)
+        {
+            foreach (var possibleBrokenString in possibleBrokenStrings)
+            {
+                var _ = Uuid.TryParse(possibleBrokenString, out var _);
             }
         }
 
-        [Benchmark]
-        public void guid_TryParseN_1kk()
-        {
-            foreach (var brokenString in _sometimesBrokenRandomUuidsN_1_000_000)
-            {
-                var _ = Guid.TryParse(brokenString, out var _);
-            }
-        }
 
-        public static string[] GenerateSometimesBrokenGuidsPStringsArray(int count)
+
+        private static string[] GenerateSometimesBrokenGuidsPStringsArray(int count)
         {
             // (dddddddd-dddd-dddd-dddd-dddddddddddd)
             var nStrings = GenerateSometimesBrokenGuidsNStringsArray(count);
@@ -174,7 +225,7 @@ namespace Uuids.Benchmarks
             return result;
         }
 
-        public static string[] GenerateSometimesBrokenGuidsBStringsArray(int count)
+        private static string[] GenerateSometimesBrokenGuidsBStringsArray(int count)
         {
             // {dddddddd-dddd-dddd-dddd-dddddddddddd}
             var nStrings = GenerateSometimesBrokenGuidsNStringsArray(count);
@@ -228,7 +279,7 @@ namespace Uuids.Benchmarks
             return result;
         }
 
-        public static string[] GenerateSometimesBrokenGuidsXStringsArray(int count)
+        private static string[] GenerateSometimesBrokenGuidsXStringsArray(int count)
         {
             // {0xdddddddd,0xdddd,0xdddd,{0xdd,0xdd,0xdd,0xdd,0xdd,0xdd,0xdd,0xdd}}
             var nStrings = GenerateSometimesBrokenGuidsNStringsArray(count);
@@ -311,7 +362,7 @@ namespace Uuids.Benchmarks
             return result;
         }
 
-        public static string[] GenerateSometimesBrokenGuidsDStringsArray(int count)
+        private static string[] GenerateSometimesBrokenGuidsDStringsArray(int count)
         {
             // dddddddd-dddd-dddd-dddd-dddddddddddd
             var nStrings = GenerateSometimesBrokenGuidsNStringsArray(count);
@@ -363,7 +414,7 @@ namespace Uuids.Benchmarks
             return result;
         }
 
-        public static string[] GenerateSometimesBrokenGuidsNStringsArray(int count)
+        private static string[] GenerateSometimesBrokenGuidsNStringsArray(int count)
         {
             var random = new Random();
             var uuidIntegers = stackalloc int[4];
