@@ -63,14 +63,14 @@ namespace Uuids
                     _ => byte.MaxValue
                 };
         }
-
+//...
         private const ushort MaximalChar = 103;
 
         private static readonly uint* TableToHex;
         private static readonly byte* TableFromHexToBytes;
 
         public static readonly Uuid Empty = new Uuid();
-        
+
         [FieldOffset(0)] private byte _byte0;
         [FieldOffset(1)] private byte _byte1;
         [FieldOffset(2)] private byte _byte2;
@@ -88,30 +88,21 @@ namespace Uuids
         [FieldOffset(14)] private byte _byte14;
         [FieldOffset(15)] private byte _byte15;
 
-        [FieldOffset(0)] internal ulong _ulong0;
-        [FieldOffset(8)] internal ulong _ulong8;
+        [FieldOffset(0)] private ulong _ulong0;
+        [FieldOffset(8)] private ulong _ulong8;
 
-        [FieldOffset(0)] internal uint _uint0;
-        [FieldOffset(4)] internal uint _uint4;
-        [FieldOffset(8)] internal uint _uint8;
-        [FieldOffset(12)] internal uint _uint12;
-
-        [FieldOffset(0)] internal ushort _ushort0;
-        [FieldOffset(2)] internal ushort _ushort2;
-        [FieldOffset(4)] internal ushort _ushort4;
-        [FieldOffset(6)] internal ushort _ushort6;
-        [FieldOffset(8)] internal ushort _ushort8;
-        [FieldOffset(10)] internal ushort _ushort10;
-        [FieldOffset(12)] internal ushort _ushort12;
-        [FieldOffset(14)] internal ushort _ushort14;
+        [FieldOffset(0)] private int _int0;
+        [FieldOffset(4)] private int _int4;
+        [FieldOffset(8)] private int _int8;
+        [FieldOffset(12)] private int _int12;
 
         public Uuid(byte[] bytes)
         {
             if (bytes == null)
                 throw new ArgumentNullException(nameof(bytes));
-            if ((uint) bytes.Length != 16)
+            if (bytes.Length != 16)
                 throw new ArgumentException("Byte array for Uuid must be exactly 16 bytes long.", nameof(bytes));
-            this = MemoryMarshal.Read<Uuid>(bytes);
+            this = Unsafe.ReadUnaligned<Uuid>(ref MemoryMarshal.GetReference(new ReadOnlySpan<byte>(bytes)));
         }
 
         public Uuid(byte* bytes)
@@ -121,21 +112,24 @@ namespace Uuids
 
         public Uuid(ReadOnlySpan<byte> bytes)
         {
-            if ((uint) bytes.Length != 16)
+            if (bytes.Length != 16)
                 throw new ArgumentException("Byte array for Uuid must be exactly 16 bytes long.", nameof(bytes));
-            this = MemoryMarshal.Read<Uuid>(bytes);
+            this = Unsafe.ReadUnaligned<Uuid>(ref MemoryMarshal.GetReference(bytes));
         }
 
         public byte[] ToByteArray()
         {
             var result = new byte[16];
-            MemoryMarshal.Write(result, ref this);
+            Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(new Span<byte>(result)), this);
             return result;
         }
 
         public bool TryWriteBytes(Span<byte> destination)
         {
-            return MemoryMarshal.TryWrite(destination, ref this);
+            if (Unsafe.SizeOf<Uuid>() > (uint) destination.Length)
+                return false;
+            Unsafe.WriteUnaligned(ref MemoryMarshal.GetReference(destination), this);
+            return true;
         }
 
         public int CompareTo(object? value)
@@ -181,8 +175,7 @@ namespace Uuids
 
         public override int GetHashCode()
         {
-            var xorULongs = _ulong0 ^ _ulong8;
-            return ((int) xorULongs) ^ (int) (xorULongs >> 32);
+            return _int0 ^ _int4 ^ _int8 ^ _int12;
         }
 
         public static bool operator ==(Uuid left, Uuid right)
@@ -204,7 +197,7 @@ namespace Uuids
         {
             return ToString(format, null);
         }
-
+        
         public string ToString(string? format, IFormatProvider? provider)
         {
             if (string.IsNullOrEmpty(format)) format = "D";
@@ -230,7 +223,7 @@ namespace Uuids
                 case 'n':
                 {
                     var uuidString = CoreLib.Internal.FastAllocateString(32);
-                    fixed (char* uuidChars = &uuidString.GetPinnableReference())
+                    fixed (char* uuidChars = uuidString)
                     {
                         FormatN(uuidChars);
                     }
@@ -302,43 +295,6 @@ namespace Uuids
             uintDest[10] = TableToHex[_byte9];
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private void FormatN(char* dest)
-        {
-            // dddddddddddddddddddddddddddddddd
-            if (Avx2.IsSupported)
-            {
-                FormatNAvx(dest);
-            }
-            else
-            {
-                FormatNTable(dest);
-            }
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private void FormatNTable(char* dest)
-        {
-            // dddddddddddddddddddddddddddddddd
-            var destUints = (uint*) dest;
-            destUints[0] = TableToHex[_byte0];
-            destUints[1] = TableToHex[_byte1];
-            destUints[2] = TableToHex[_byte2];
-            destUints[3] = TableToHex[_byte3];
-            destUints[4] = TableToHex[_byte4];
-            destUints[5] = TableToHex[_byte5];
-            destUints[6] = TableToHex[_byte6];
-            destUints[7] = TableToHex[_byte7];
-            destUints[8] = TableToHex[_byte8];
-            destUints[9] = TableToHex[_byte9];
-            destUints[10] = TableToHex[_byte10];
-            destUints[11] = TableToHex[_byte11];
-            destUints[12] = TableToHex[_byte12];
-            destUints[13] = TableToHex[_byte13];
-            destUints[14] = TableToHex[_byte14];
-            destUints[15] = TableToHex[_byte15];
-        }
-
         private static Vector256<byte> ShuffleMask = Vector256.Create(
             255, 0, 255, 2, 255, 4, 255, 6, 255, 8, 255, 10, 255, 12, 255, 14,
             255, 0, 255, 2, 255, 4, 255, 6, 255, 8, 255, 10, 255, 12, 255, 14);
@@ -350,17 +306,40 @@ namespace Uuids
         // '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'a', 'b', 'c', 'd', 'e', 'f'
 
         [MethodImpl(MethodImplOptions.AggressiveInlining | MethodImplOptions.AggressiveOptimization)]
-        private void FormatNAvx(char* dest)
+        private void FormatN(char* dest)
         {
-            // ddddddddddddddddddddddddddddddd
-            fixed (Uuid* thisPtr = &this)
+            // dddddddddddddddddddddddddddddddd
+            if (Avx2.IsSupported)
             {
-                var uuidVector = Avx2.ConvertToVector256Int16(Sse3.LoadDquVector128((byte*) thisPtr));
-                var hi = Avx2.ShiftRightLogical(uuidVector, 4).AsByte();
-                var lo = Avx2.Shuffle(uuidVector.AsByte(), ShuffleMask);
-                var asciiBytes = Avx2.Shuffle(AsciiTable, Avx2.And(Avx2.Or(hi, lo), Vector256.Create((byte) 15)));
-                Avx.Store((short*) dest, Avx2.ConvertToVector256Int16(asciiBytes.GetLower()));
-                Avx.Store((((short*) dest) + 16), Avx2.ConvertToVector256Int16(asciiBytes.GetUpper()));
+                fixed (Uuid* thisPtr = &this)
+                {
+                    var uuidVector = Avx2.ConvertToVector256Int16(Sse3.LoadDquVector128((byte*) thisPtr));
+                    var hi = Avx2.ShiftRightLogical(uuidVector, 4).AsByte();
+                    var lo = Avx2.Shuffle(uuidVector.AsByte(), ShuffleMask);
+                    var asciiBytes = Avx2.Shuffle(AsciiTable, Avx2.And(Avx2.Or(hi, lo), Vector256.Create((byte) 0x0F)));
+                    Avx.Store((short*) dest, Avx2.ConvertToVector256Int16(asciiBytes.GetLower()));
+                    Avx.Store((((short*) dest) + 16), Avx2.ConvertToVector256Int16(asciiBytes.GetUpper()));
+                }
+            }
+            else
+            {
+                var destUints = (uint*) dest;
+                destUints[0] = TableToHex[_byte0];
+                destUints[1] = TableToHex[_byte1];
+                destUints[2] = TableToHex[_byte2];
+                destUints[3] = TableToHex[_byte3];
+                destUints[4] = TableToHex[_byte4];
+                destUints[5] = TableToHex[_byte5];
+                destUints[6] = TableToHex[_byte6];
+                destUints[7] = TableToHex[_byte7];
+                destUints[8] = TableToHex[_byte8];
+                destUints[9] = TableToHex[_byte9];
+                destUints[10] = TableToHex[_byte10];
+                destUints[11] = TableToHex[_byte11];
+                destUints[12] = TableToHex[_byte12];
+                destUints[13] = TableToHex[_byte13];
+                destUints[14] = TableToHex[_byte14];
+                destUints[15] = TableToHex[_byte15];
             }
         }
 
@@ -489,7 +468,7 @@ namespace Uuids
                 throw new FormatException("Unrecognized Uuid format.");
             var result = new Uuid();
             var resultPtr = (byte*) &result;
-            fixed (char* uuidStringPtr = &input.GetPinnableReference())
+            fixed (char* uuidStringPtr = input)
             {
                 ParseWithExceptions(input, uuidStringPtr, resultPtr);
             }
@@ -530,7 +509,7 @@ namespace Uuids
 
             var result = new Uuid();
             var resultPtr = (byte*) &result;
-            fixed (char* uuidStringPtr = &input.GetPinnableReference())
+            fixed (char* uuidStringPtr = input)
             {
                 if (ParseWithoutExceptions(input, uuidStringPtr, resultPtr))
                 {
@@ -619,7 +598,7 @@ namespace Uuids
             {
                 case 'd':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         ParseWithExceptionsD(input, uuidStringPtr, resultPtr);
                     }
@@ -628,7 +607,7 @@ namespace Uuids
                 }
                 case 'n':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         ParseWithExceptionsN(input, uuidStringPtr, resultPtr);
                     }
@@ -637,7 +616,7 @@ namespace Uuids
                 }
                 case 'b':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         ParseWithExceptionsB(input, uuidStringPtr, resultPtr);
                     }
@@ -646,7 +625,7 @@ namespace Uuids
                 }
                 case 'p':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         ParseWithExceptionsP(input, uuidStringPtr, resultPtr);
                     }
@@ -655,7 +634,7 @@ namespace Uuids
                 }
                 case 'x':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         ParseWithExceptionsX(input, uuidStringPtr, resultPtr);
                     }
@@ -757,7 +736,7 @@ namespace Uuids
             {
                 case 'd':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         parsed = ParseWithoutExceptionsD(input, uuidStringPtr, resultPtr);
                     }
@@ -766,7 +745,7 @@ namespace Uuids
                 }
                 case 'n':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         parsed = ParseWithoutExceptionsN(input, uuidStringPtr, resultPtr);
                     }
@@ -775,7 +754,7 @@ namespace Uuids
                 }
                 case 'b':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         parsed = ParseWithoutExceptionsB(input, uuidStringPtr, resultPtr);
                     }
@@ -784,7 +763,7 @@ namespace Uuids
                 }
                 case 'p':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         parsed = ParseWithoutExceptionsP(input, uuidStringPtr, resultPtr);
                     }
@@ -793,7 +772,7 @@ namespace Uuids
                 }
                 case 'x':
                 {
-                    fixed (char* uuidStringPtr = &input.GetPinnableReference())
+                    fixed (char* uuidStringPtr = input)
                     {
                         parsed = ParseWithoutExceptionsX(input, uuidStringPtr, resultPtr);
                     }

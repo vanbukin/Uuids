@@ -6,11 +6,13 @@ namespace Uuids.Benchmarks
     {
         public static void Main(string[] args)
         {
-            BenchmarkRunner.Run<UuidGeneratorBenchmarks>();
-            BenchmarkRunner.Run<UuidCtorBenchmarks>();
-            BenchmarkRunner.Run<UuidToStringBenchmarks>();
-            BenchmarkRunner.Run<UuidCommonBenchmarks>();
-            BenchmarkRunner.Run<UuidTryParseBenchmarks>();
+            BenchmarkRunner.Run<CtorBenchmarks>();
+            BenchmarkRunner.Run<GeneratorBenchmarks>();
+            BenchmarkRunner.Run<ImplementedInterfacesBenchmarks>();
+            BenchmarkRunner.Run<InstanceMethodsBenchmarks>();
+            BenchmarkRunner.Run<OverridesBenchmarks>();
+            BenchmarkRunner.Run<ToStringBenchmarks>();
+            BenchmarkRunner.Run<TryParseBenchmarks>();
         }
     }
 }
