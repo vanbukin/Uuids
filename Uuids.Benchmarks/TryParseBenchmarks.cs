@@ -7,6 +7,7 @@ using BenchmarkDotNet.Configs;
 
 namespace Uuids.Benchmarks
 {
+    [GcServer(true)]
     [SuppressMessage("ReSharper", "InconsistentNaming")]
     [SuppressMessage("ReSharper", "MemberCanBePrivate.Global")]
     [MemoryDiagnoser]

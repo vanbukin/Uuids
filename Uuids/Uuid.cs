@@ -63,7 +63,7 @@ namespace Uuids
                     _ => byte.MaxValue
                 };
         }
-//...
+        
         private const ushort MaximalChar = 103;
 
         private static readonly uint* TableToHex;
@@ -132,29 +132,82 @@ namespace Uuids
             return true;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public int CompareTo(object? value)
         {
             if (value == null) return 1;
-
             if (!(value is Uuid)) throw new ArgumentException("Object must be of type Uuid.", nameof(value));
-
             var other = (Uuid) value;
-
-            if (other._ulong0 != _ulong0)
-                return _ulong0 < other._ulong0 ? -1 : 1;
-
-            if (other._ulong8 != _ulong8)
-                return _ulong8 < other._ulong8 ? -1 : 1;
-
+            if (other._byte0 != _byte0)
+                return _byte0 < other._byte0 ? -1 : 1;
+            if (other._byte1 != _byte1)
+                return _byte1 < other._byte1 ? -1 : 1;
+            if (other._byte2 != _byte2)
+                return _byte2 < other._byte2 ? -1 : 1;
+            if (other._byte3 != _byte3)
+                return _byte3 < other._byte3 ? -1 : 1;
+            if (other._byte4 != _byte4)
+                return _byte4 < other._byte4 ? -1 : 1;
+            if (other._byte5 != _byte5)
+                return _byte5 < other._byte5 ? -1 : 1;
+            if (other._byte6 != _byte6)
+                return _byte6 < other._byte6 ? -1 : 1;
+            if (other._byte7 != _byte7)
+                return _byte7 < other._byte7 ? -1 : 1;
+            if (other._byte8 != _byte8)
+                return _byte8 < other._byte8 ? -1 : 1;
+            if (other._byte9 != _byte9)
+                return _byte9 < other._byte9 ? -1 : 1;
+            if (other._byte10 != _byte10)
+                return _byte10 < other._byte10 ? -1 : 1;
+            if (other._byte11 != _byte11)
+                return _byte11 < other._byte11 ? -1 : 1;
+            if (other._byte12 != _byte12)
+                return _byte12 < other._byte12 ? -1 : 1;
+            if (other._byte13 != _byte13)
+                return _byte13 < other._byte13 ? -1 : 1;
+            if (other._byte14 != _byte14)
+                return _byte14 < other._byte14 ? -1 : 1;
+            if (other._byte15 != _byte15)
+                return _byte15 < other._byte15 ? -1 : 1;
             return 0;
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveOptimization)]
         public int CompareTo(Uuid other)
         {
-            if (other._ulong0 != _ulong0) return _ulong0 < other._ulong0 ? -1 : 1;
-
-            if (other._ulong8 != _ulong8) return _ulong8 < other._ulong8 ? -1 : 1;
-
+            if (other._byte0 != _byte0)
+                return _byte0 < other._byte0 ? -1 : 1;
+            if (other._byte1 != _byte1)
+                return _byte1 < other._byte1 ? -1 : 1;
+            if (other._byte2 != _byte2)
+                return _byte2 < other._byte2 ? -1 : 1;
+            if (other._byte3 != _byte3)
+                return _byte3 < other._byte3 ? -1 : 1;
+            if (other._byte4 != _byte4)
+                return _byte4 < other._byte4 ? -1 : 1;
+            if (other._byte5 != _byte5)
+                return _byte5 < other._byte5 ? -1 : 1;
+            if (other._byte6 != _byte6)
+                return _byte6 < other._byte6 ? -1 : 1;
+            if (other._byte7 != _byte7)
+                return _byte7 < other._byte7 ? -1 : 1;
+            if (other._byte8 != _byte8)
+                return _byte8 < other._byte8 ? -1 : 1;
+            if (other._byte9 != _byte9)
+                return _byte9 < other._byte9 ? -1 : 1;
+            if (other._byte10 != _byte10)
+                return _byte10 < other._byte10 ? -1 : 1;
+            if (other._byte11 != _byte11)
+                return _byte11 < other._byte11 ? -1 : 1;
+            if (other._byte12 != _byte12)
+                return _byte12 < other._byte12 ? -1 : 1;
+            if (other._byte13 != _byte13)
+                return _byte13 < other._byte13 ? -1 : 1;
+            if (other._byte14 != _byte14)
+                return _byte14 < other._byte14 ? -1 : 1;
+            if (other._byte15 != _byte15)
+                return _byte15 < other._byte15 ? -1 : 1;
             return 0;
         }
 
@@ -197,7 +250,7 @@ namespace Uuids
         {
             return ToString(format, null);
         }
-        
+
         public string ToString(string? format, IFormatProvider? provider)
         {
             if (string.IsNullOrEmpty(format)) format = "D";

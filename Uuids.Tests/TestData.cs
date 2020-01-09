@@ -1,5 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
+using NUnit.Framework;
 
 namespace Uuids.Tests
 {
@@ -169,5 +172,73 @@ namespace Uuids.Tests
                 typeof(ArgumentException)
             }
         };
+
+        public static object[] CorrectNStringsToSort { get; } =
+        {
+            new object[]
+            {
+                GenerateStringsToCompare()
+            },
+        };
+
+        private static string[] GenerateStringsToCompare()
+        {
+            var resultStrings = new List<string>();
+            for (int stringsToCreate = 32, itemsToFill = 1;
+                stringsToCreate > 0;
+                stringsToCreate = stringsToCreate >> 1, itemsToFill = itemsToFill << 1)
+            {
+                for (var stringIndex = 0; stringIndex < stringsToCreate; stringIndex++)
+                {
+                    resultStrings.Add(
+                        string.Create(
+                            32,
+                            (stringIndex * itemsToFill, itmesToFill: itemsToFill),
+                            (result, state) =>
+                            {
+                                var (startPositionToFill, itemsToFillCount) = state;
+                                for (var j = 0; j < 32; j++)
+                                {
+                                    result[j] = '0';
+                                }
+
+                                result[startPositionToFill] = '1';
+                                for (var j = 0; j < itemsToFillCount; j++)
+                                {
+                                    result[startPositionToFill + j] = '1';
+                                }
+                            }));
+                }
+            }
+
+            for (int stringsToCreate = 32, itemsToFill = 1;
+                stringsToCreate > 0;
+                stringsToCreate = stringsToCreate >> 1, itemsToFill = itemsToFill << 1)
+            {
+                for (var stringIndex = 0; stringIndex < stringsToCreate; stringIndex++)
+                {
+                    resultStrings.Add(
+                        string.Create(
+                            32,
+                            (stringIndex * itemsToFill, itmesToFill: itemsToFill),
+                            (result, state) =>
+                            {
+                                var (startPositionToFill, itemsToFillCount) = state;
+                                for (var j = 0; j < 32; j++)
+                                {
+                                    result[j] = '1';
+                                }
+
+                                result[startPositionToFill] = '1';
+                                for (var j = 0; j < itemsToFillCount; j++)
+                                {
+                                    result[startPositionToFill + j] = '0';
+                                }
+                            }));
+                }
+            }
+
+            return resultStrings.Distinct().ToArray();
+        }
     }
 }

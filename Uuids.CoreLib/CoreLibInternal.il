@@ -38,10 +38,10 @@
 		01 00 07 52 65 6c 65 61 73 65 00 00
 	)
 	.custom instance void [System.Runtime]System.Reflection.AssemblyFileVersionAttribute::.ctor(string) = (
-		01 00 07 31 2e 30 2e 32 2e 30 00 00
+		01 00 07 31 2e 30 2e 33 2e 30 00 00
 	)
 	.custom instance void [System.Runtime]System.Reflection.AssemblyInformationalVersionAttribute::.ctor(string) = (
-		01 00 05 31 2e 30 2e 32 00 00
+		01 00 05 31 2e 30 2e 33 00 00
 	)
 	.custom instance void [System.Runtime]System.Reflection.AssemblyProductAttribute::.ctor(string) = (
 		01 00 0d 55 75 69 64 73 2e 43 6f 72 65 4c 69 62
@@ -56,7 +56,7 @@
   	65 2e 43 6f 72 65 4c 69 62 00 00
   )
 	.hash algorithm 0x00008004 // SHA1
-	.ver 1:0:2:0
+	.ver 1:0:3:0
 }
 
 .module Uuids.CoreLib.dll
