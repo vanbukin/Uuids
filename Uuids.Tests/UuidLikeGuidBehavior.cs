@@ -1,6 +1,7 @@
 using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Uuids.Tests
@@ -910,6 +911,23 @@ namespace Uuids.Tests
 
                 Assert.AreEqual(guid.GetHashCode(), uuid.GetHashCode());
             });
+        }
+
+        [TestCaseSource(typeof(TestData), nameof(TestData.CorrectNStringsToSort))]
+        public void OrderByWorksLikeGuid(string[] nStrings)
+        {
+            var guids = nStrings
+                .Select(x => new Guid(x))
+                .OrderBy(x => x)
+                .ToArray();
+            var uuids = nStrings
+                .Select(x => new Uuid(x))
+                .OrderBy(x => x)
+                .ToArray();
+            var guidStrings = guids.Select(x => x.ToString("D")).ToArray();
+            var uuidStrings = uuids.Select(x => x.ToString("D")).ToArray();
+
+            Assert.That(uuidStrings, Is.EqualTo(guidStrings));
         }
 
 
