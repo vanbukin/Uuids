@@ -63,8 +63,7 @@ namespace Uuids
                     _ => byte.MaxValue
                 };
         }
-
-//...
+        
         private const ushort MaximalChar = 103;
 
         private static readonly uint* TableToHex;
