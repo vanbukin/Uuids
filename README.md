@@ -3,7 +3,7 @@ Uuid structure like `System.Guid`, but with big-endian string representation
 
 ## How to open
   * `git clone git@github.com:vanbukin/Uuids.git`
-  * `cd ./Uuids/Uuids.CoreLib && dotnet publish -c Dubug && dotnet publish -c Release` (no IDE support for .ilproj)
+  * `cd ./Uuids/Uuids.CoreLib && dotnet publish -c Debug && dotnet publish -c Release` (no IDE support for .ilproj)
   * open `./Uuids/Uuids.sln` with IDE and unload `Uuids.CoreLib` project
   * have fun
 
