@@ -29,60 +29,22 @@ namespace Uuids.Benchmarks
         }
 
         // ReadOnlySpan<byte>
-        [Benchmark(OperationsPerInvoke = 16)]
+        [Benchmark]
         [BenchmarkCategory("ReadOnlySpan<byte>")]
         [Arguments(new byte[] {253, 47, 238, 170, 214, 83, 143, 78, 140, 107, 139, 132, 94, 5, 145, 199})]
         [SuppressMessage("ReSharper", "ObjectCreationAsStatement")]
-        public void guid_CtorReadOnlySpan(byte[] guidBytes)
+        public Guid guid_CtorReadOnlySpan(ReadOnlySpan<byte> span)
         {
-            var span = new ReadOnlySpan<byte>(guidBytes);
-            new Guid(span);
-            new Guid(span);
-            new Guid(span);
-            new Guid(span);
-
-            new Guid(span);
-            new Guid(span);
-            new Guid(span);
-            new Guid(span);
-
-            new Guid(span);
-            new Guid(span);
-            new Guid(span);
-            new Guid(span);
-
-            new Guid(span);
-            new Guid(span);
-            new Guid(span);
-            new Guid(span);
+            return new Guid(span);
         }
 
-        [Benchmark(OperationsPerInvoke = 16)]
+        [Benchmark]
         [BenchmarkCategory("ReadOnlySpan<byte>")]
         [Arguments(new byte[] {170, 238, 47, 253, 83, 214, 78, 143, 140, 107, 139, 132, 94, 5, 145, 199})]
         [SuppressMessage("ReSharper", "ObjectCreationAsStatement")]
-        public void uuid_CtorReadOnlySpan(byte[] uuidBytes)
+        public Uuid uuid_CtorReadOnlySpan(ReadOnlySpan<byte> span)
         {
-            var span = new ReadOnlySpan<byte>(uuidBytes);
-            new Uuid(span);
-            new Uuid(span);
-            new Uuid(span);
-            new Uuid(span);
-
-            new Uuid(span);
-            new Uuid(span);
-            new Uuid(span);
-            new Uuid(span);
-
-            new Uuid(span);
-            new Uuid(span);
-            new Uuid(span);
-            new Uuid(span);
-
-            new Uuid(span);
-            new Uuid(span);
-            new Uuid(span);
-            new Uuid(span);
+            return new Uuid(span);
         }
     }
 }
