@@ -1,6 +1,6 @@
 # Uuids
 
-The main goal is [Uuid](./src/Uuids/Uuid.cs) implementation according to the [RFC4122](https://tools.ietf.org/html/rfc4122).
+[Uuid](./src/Uuids/Uuid.cs) implementation according to the [RFC4122](https://tools.ietf.org/html/rfc4122).
 
 .NET provides [System.Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid) struct which is special case of the RFC4122 implementation. System.Guid has [little-endian layout](https://github.com/dotnet/runtime/blob/v7.0.0/src/libraries/System.Private.CoreLib/src/System/Guid.cs#L30-L32) for the first 8 bytes (int32, int16, int16).
 
