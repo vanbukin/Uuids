@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net6.0;net7.0</TargetFrameworks>
+    <OutputType>Library</OutputType>
+    <LangVersion>11.0</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <PackageId>Uuids</PackageId>
+    <NoWarn>$(NoWarn);NU5125</NoWarn>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <DebugType>embedded</DebugType>
+    <IncludeSymbols>true</IncludeSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="../../LICENSE" Pack="true" Visible="false" PackagePath=""/>
+  </ItemGroup>
+
+</Project>
