@@ -139,7 +139,7 @@ jobs:
           fi
           echo "release_version_with_suffix=${version_with_suffix}" >> $GITHUB_ENV
           echo "release_has_suffix=${has_suffix}" >> $GITHUB_ENV
-      - name: Create release
+      - name: Create release draft
         uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
