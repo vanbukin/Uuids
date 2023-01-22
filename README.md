@@ -1,5 +1,8 @@
 # Uuids
 
+[![Latest release](https://img.shields.io/badge/nuget-2.0.0-blue?&kill_cache=1)](https://www.nuget.org/packages/Uuids/2.0.0-beta2)
+[![Coverage Status](https://coveralls.io/repos/github/vanbukin/Uuids/badge.svg?branch=refs/tags/2.0.0-beta2&kill_cache=1)](https://coveralls.io/github/vanbukin/Uuids?branch=refs/tags/2.0.0-beta2)
+
 [Uuid](./src/Uuids/Uuid.cs) implementation according to the [RFC4122](https://tools.ietf.org/html/rfc4122).
 
 .NET provides [System.Guid](https://docs.microsoft.com/en-us/dotnet/api/system.guid) struct which is special case of the RFC4122 implementation. System.Guid has [little-endian layout](https://github.com/dotnet/runtime/blob/v7.0.0/src/libraries/System.Private.CoreLib/src/System/Guid.cs#L30-L32) for the first 8 bytes (int32, int16, int16).
