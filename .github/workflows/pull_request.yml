@@ -4,7 +4,7 @@ on:
     branches:
       - main
 jobs:
-  compare-version:
+  compare-versions:
     name: Compare versions in current branch and main
     runs-on: ubuntu-22.04
     if: ${{ !contains(github.event.commits[0].message, '[skip ci]') }}
@@ -96,7 +96,7 @@ jobs:
           fi
   run-tests:
     name: Run tests
-    needs: validate-version
+    needs: compare-versions
     runs-on: ubuntu-22.04
     if: ${{ !contains(github.event.commits[0].message, '[skip ci]') }}
     env:
