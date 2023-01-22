@@ -1,0 +1,124 @@
+name: Release publish
+on:
+  release:
+    types: [published]
+jobs:
+  build-test-and-publish:
+    name: Build and publish library to NuGet
+    runs-on: ubuntu-22.04
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+      - name: Setup .NET Core SDK 6.0.405
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 6.0.405
+      - name: Setup .NET Core SDK 7.0.102
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.0.102
+      - name: Create coverage directory and promote absolute paths to env
+        shell: bash
+        run: |
+          mkdir coverage
+          PATH_TO_COVERAGE_DIRECTORY=$(realpath coverage)
+          echo "coverage_directory=${PATH_TO_COVERAGE_DIRECTORY}" >> $GITHUB_ENV
+
+          PATH_NET6_NOHW="${PATH_TO_COVERAGE_DIRECTORY}/cover_net6nohw"
+          echo "cover_net6_nohw=${PATH_NET6_NOHW}" >> $GITHUB_ENV
+          echo "cover_net6_nohw_merge=${PATH_NET6_NOHW}.net6.0.json" >> $GITHUB_ENV
+
+          PATH_NET6_HW="${PATH_TO_COVERAGE_DIRECTORY}/cover_net6hw"
+          echo "cover_net6_hw=${PATH_NET6_HW}" >> $GITHUB_ENV
+          echo "cover_net6_hw_merge=${PATH_NET6_HW}.net6.0.json" >> $GITHUB_ENV
+
+          PATH_NET7_NOHW="${PATH_TO_COVERAGE_DIRECTORY}/cover_net7nohw"
+          echo "cover_net7_nohw=${PATH_NET7_NOHW}" >> $GITHUB_ENV
+          echo "cover_net7_nohw_merge=${PATH_NET7_NOHW}.net7.0.json" >> $GITHUB_ENV
+
+          PATH_NET7_HW="${PATH_TO_COVERAGE_DIRECTORY}/cover_net7hw"
+          echo "cover_net7_hw=${PATH_NET7_HW}" >> $GITHUB_ENV
+          echo "cover_net7_hw_merge=${PATH_NET7_HW}.net7.0.info" >> $GITHUB_ENV
+      - name: Run .NET 6 tests without Hardware Intrinsics
+        shell: bash
+        run: |
+          export COMPlus_EnableHWIntrinsic=0
+          export COMPlus_ReadyToRun=0
+          export CollectCoverage=true
+          export CoverletOutputFormat=json
+          export CoverletOutput=${{ env.cover_net6_nohw }}
+          dotnet test -c Release ./src/Uuids.Tests/Uuids.Tests.csproj -f net6.0
+      - name: Run .NET 6 tests with Hardware Intrinsics
+        shell: bash
+        run: |
+          export COMPlus_EnableHWIntrinsic=1
+          unset COMPlus_ReadyToRun
+          export CollectCoverage=true
+          export CoverletOutputFormat=json
+          export CoverletOutput=${{ env.cover_net6_hw }}
+          export MergeWith=${{ env.cover_net6_nohw_merge }}
+          dotnet test -c Release ./src/Uuids.Tests/Uuids.Tests.csproj -f net6.0
+      - name: Run .NET 7 tests without Hardware Intrinsics
+        shell: bash
+        run: |
+          export COMPlus_EnableHWIntrinsic=0
+          export CollectCoverage=true
+          export CoverletOutputFormat=json
+          export CoverletOutput=${{ env.cover_net7_nohw }}
+          export MergeWith=${{ env.cover_net6_hw_merge }}
+          dotnet test -c Release ./src/Uuids.Tests/Uuids.Tests.csproj -f net7.0
+      - name: Run .NET 7 tests with Hardware Intrinsics
+        shell: bash
+        run: |
+          export COMPlus_EnableHWIntrinsic=1
+          export CollectCoverage=true
+          export CoverletOutputFormat=lcov
+          export CoverletOutput=${{ env.cover_net7_hw }}
+          export MergeWith=${{ env.cover_net7_nohw_merge }}
+          dotnet test -c Release ./src/Uuids.Tests/Uuids.Tests.csproj -f net7.0
+      - name: Publish coverage report to coveralls.io
+        uses: coverallsapp/github-action@1.1.3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ env.cover_net7_hw_merge }}
+      - name: Build and publish library to NuGet
+        shell: bash
+        run: |
+          dotnet publish ./src/Uuids/Uuids.csproj -c Release -f net6.0
+          dotnet publish ./src/Uuids/Uuids.csproj -c Release -f net7.0
+          dotnet pack -c Release --no-restore --no-build --output out ./src/Uuids/Uuids.csproj
+          rm ./out/*.symbols.nupkg
+          PATH_TO_PACKAGE=$(readlink -f ./out/*.nupkg)
+          dotnet nuget push "$PATH_TO_PACKAGE" --source https://api.nuget.org/v3/index.json --api-key ${{ secrets.NUGET_API_KEY }}
+      - uses: actions/upload-artifact@v3
+        with:
+          name: NuGet package
+          path: out/
+  upload-release-assets:
+    name: Upload release assets
+    runs-on: ubuntu-22.04
+    needs: build-test-and-publish
+    steps:
+      - uses: actions/download-artifact@v3
+        with:
+          name: NuGet package
+          path: out
+      - name: Get package
+        shell: bash
+        run: |
+          OUT_PACKAGE_NAME="$(ls out/)"
+          echo "out_package_name=$OUT_PACKAGE_NAME" >> $GITHUB_ENV
+      - name: Upload release assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_path: ./out/${{ env.out_package_name }}
+          asset_name: ${{ env.out_package_name }}
+          asset_content_type: application/zip

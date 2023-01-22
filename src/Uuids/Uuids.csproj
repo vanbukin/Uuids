@@ -7,13 +7,26 @@
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <PackageId>Uuids</PackageId>
     <NoWarn>$(NoWarn);NU5125</NoWarn>
-    <PackageLicenseFile>LICENSE</PackageLicenseFile>
     <DebugType>embedded</DebugType>
     <IncludeSymbols>true</IncludeSymbols>
+    <Description>Uuid fully compliant with RFC4122</Description>
+    <PackageTags>Uuid Uuids Uuidv1</PackageTags>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+    <PackageLicenseFile>LICENSE</PackageLicenseFile>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
     <None Include="../../LICENSE" Pack="true" Visible="false" PackagePath=""/>
+  </ItemGroup>
+
+  <PropertyGroup>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.1.1" PrivateAssets="All"/>
   </ItemGroup>
 
 </Project>
