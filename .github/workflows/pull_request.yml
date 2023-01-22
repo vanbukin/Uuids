@@ -1,0 +1,181 @@
+name: Pull request
+on:
+  pull_request:
+    branches:
+      - main
+jobs:
+  compare-version:
+    name: Compare versions in current branch and main
+    runs-on: ubuntu-22.04
+    if: ${{ !contains(github.event.commits[0].message, '[skip ci]') }}
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+      - name: Get source branch version
+        shell: bash
+        run: |
+          version_prefix=$(cat ./Directory.Build.props | grep "<VersionPrefix>" | sed -e "s/ *<\/*VersionPrefix>//g")
+          version_suffix=$(cat ./Directory.Build.props | grep "<VersionSuffix>" | sed -e "s/ *<\/*VersionSuffix>//g")
+          echo "Package version prefix: $version_prefix"
+          echo "Package version suffix: $version_suffix"
+          if [ -z "${version_prefix// }" ]; then exit 1; fi
+          version_with_suffix="${version_prefix}"
+          has_suffix="false"
+          if [ ! -z "${version_suffix// }" ]
+          then
+              version_with_suffix="${version_prefix}-${version_suffix}"
+              has_suffix="true"
+          fi
+          echo "version_with_suffix_src=${version_with_suffix}" >> $GITHUB_ENV
+          echo "has_suffix_src=${has_suffix}" >> $GITHUB_ENV
+      - name: Checkout target branch
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.base_ref }}
+      - name: Get target branch version
+        shell: bash
+        run: |
+          version_prefix=$(cat ./Directory.Build.props | grep "<VersionPrefix>" | sed -e "s/ *<\/*VersionPrefix>//g")
+          version_suffix=$(cat ./Directory.Build.props | grep "<VersionSuffix>" | sed -e "s/ *<\/*VersionSuffix>//g")
+          echo "Package version prefix: $version_prefix"
+          echo "Package version suffix: $version_suffix"
+          if [ -z "${version_prefix// }" ]; then exit 1; fi
+          version_with_suffix="${version_prefix}"
+          has_suffix="false"
+          if [ ! -z "${version_suffix// }" ]
+          then
+              version_with_suffix="${version_prefix}-${version_suffix}"
+              has_suffix="true"
+          fi
+          echo "version_with_suffix_dst=${version_with_suffix}" >> $GITHUB_ENV
+          echo "has_suffix_dst=${has_suffix}" >> $GITHUB_ENV
+      - name: Setup .NET Core SDK 7.0.102
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.0.102
+      - name: Checkout source branch back
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+      - name: Compare versions
+        env:
+          source_version: ${{ env.version_with_suffix_src }}
+          target_version: ${{ env.version_with_suffix_dst }}
+        shell: bash
+        run: |
+          dotnet publish -c Release ./tools/Uuids.Tools.CompareVersions/Uuids.Tools.CompareVersions.csproj
+          source_more_than_target=$(dotnet ./tools/Uuids.Tools.CompareVersions/bin/Release/net7.0/publish/Uuids.Tools.CompareVersions.dll "${source_version}" "${target_version}")
+          last_exit_code=$(printf "%d" $?)
+          source_more_than_target=$(printf "%s" $source_more_than_target)
+          if [ "$last_exit_code" -ne 0 ]
+          then
+            echo "dotnet run status code is ${last_exit_code}"
+            exit 1
+          fi
+          if (( "$source_more_than_target" >= -1 && "$source_more_than_target" <=1 ))
+          then
+            if (( "$source_more_than_target" == 1 ))
+            then
+              echo "Version check passed"
+            elif (( "$source_more_than_target" == 0 ))
+            then
+              echo "Source and target versions are same! Expect that source version will be greater than target."
+              exit 1
+            else
+              echo "Target version is bigger than source! Expect that source version will be greater than target."
+              exit 1
+            fi
+          else
+            echo "Unexpected range result from version tool. Result is: ${source_more_than_target}"
+            exit 1
+          fi
+  run-tests:
+    name: Run tests
+    needs: validate-version
+    runs-on: ubuntu-22.04
+    if: ${{ !contains(github.event.commits[0].message, '[skip ci]') }}
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          ref: ${{ github.sha }}
+      - name: Setup .NET Core SDK 6.0.405
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 6.0.405
+      - name: Setup .NET Core SDK 7.0.102
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.0.102
+      - name: Create coverage directory and promote absolute paths to env
+        shell: bash
+        run: |
+          mkdir coverage
+          PATH_TO_COVERAGE_DIRECTORY=$(realpath coverage)
+          echo "coverage_directory=${PATH_TO_COVERAGE_DIRECTORY}" >> $GITHUB_ENV
+
+          PATH_NET6_NOHW="${PATH_TO_COVERAGE_DIRECTORY}/cover_net6nohw"
+          echo "cover_net6_nohw=${PATH_NET6_NOHW}" >> $GITHUB_ENV
+          echo "cover_net6_nohw_merge=${PATH_NET6_NOHW}.net6.0.json" >> $GITHUB_ENV
+
+          PATH_NET6_HW="${PATH_TO_COVERAGE_DIRECTORY}/cover_net6hw"
+          echo "cover_net6_hw=${PATH_NET6_HW}" >> $GITHUB_ENV
+          echo "cover_net6_hw_merge=${PATH_NET6_HW}.net6.0.json" >> $GITHUB_ENV
+
+          PATH_NET7_NOHW="${PATH_TO_COVERAGE_DIRECTORY}/cover_net7nohw"
+          echo "cover_net7_nohw=${PATH_NET7_NOHW}" >> $GITHUB_ENV
+          echo "cover_net7_nohw_merge=${PATH_NET7_NOHW}.net7.0.json" >> $GITHUB_ENV
+
+          PATH_NET7_HW="${PATH_TO_COVERAGE_DIRECTORY}/cover_net7hw"
+          echo "cover_net7_hw=${PATH_NET7_HW}" >> $GITHUB_ENV
+          echo "cover_net7_hw_merge=${PATH_NET7_HW}.net7.0.info" >> $GITHUB_ENV
+      - name: Run .NET 6 tests without Hardware Intrinsics
+        shell: bash
+        run: |
+          export COMPlus_EnableHWIntrinsic=0
+          export COMPlus_ReadyToRun=0
+          export CollectCoverage=true
+          export CoverletOutputFormat=json
+          export CoverletOutput=${{ env.cover_net6_nohw }}
+          dotnet test -c Release ./src/Uuids.Tests/Uuids.Tests.csproj -f net6.0
+      - name: Run .NET 6 tests with Hardware Intrinsics
+        shell: bash
+        run: |
+          export COMPlus_EnableHWIntrinsic=1
+          unset COMPlus_ReadyToRun
+          export CollectCoverage=true
+          export CoverletOutputFormat=json
+          export CoverletOutput=${{ env.cover_net6_hw }}
+          export MergeWith=${{ env.cover_net6_nohw_merge }}
+          dotnet test -c Release ./src/Uuids.Tests/Uuids.Tests.csproj -f net6.0
+      - name: Run .NET 7 tests without Hardware Intrinsics
+        shell: bash
+        run: |
+          export COMPlus_EnableHWIntrinsic=0
+          export CollectCoverage=true
+          export CoverletOutputFormat=json
+          export CoverletOutput=${{ env.cover_net7_nohw }}
+          export MergeWith=${{ env.cover_net6_hw_merge }}
+          dotnet test -c Release ./src/Uuids.Tests/Uuids.Tests.csproj -f net7.0
+      - name: Run .NET 7 tests with Hardware Intrinsics
+        shell: bash
+        run: |
+          export COMPlus_EnableHWIntrinsic=1
+          export CollectCoverage=true
+          export CoverletOutputFormat=lcov
+          export CoverletOutput=${{ env.cover_net7_hw }}
+          export MergeWith=${{ env.cover_net7_nohw_merge }}
+          dotnet test -c Release ./src/Uuids.Tests/Uuids.Tests.csproj -f net7.0
+      - name: Publish coverage report to coveralls.io
+        uses: coverallsapp/github-action@1.1.3
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ${{ env.cover_net7_hw_merge }}
