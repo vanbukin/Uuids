@@ -1,7 +1,7 @@
 # Uuids
 
-[![Latest release](https://img.shields.io/badge/nuget-2.0.0--beta3-blue?&kill_cache=1)](https://www.nuget.org/packages/Uuids/2.0.0-beta3)
-[![Coverage Status](https://coveralls.io/repos/github/vanbukin/Uuids/badge.svg?branch=refs/tags/2.0.0-beta3&kill_cache=1)](https://coveralls.io/github/vanbukin/Uuids?branch=refs/tags/2.0.0-beta3)
+[![Latest release](https://img.shields.io/badge/nuget-2.0.0-blue?&kill_cache=1)](https://www.nuget.org/packages/Uuids/2.0.0)
+[![Coverage Status](https://coveralls.io/repos/github/vanbukin/Uuids/badge.svg?branch=refs/tags/2.0.0&kill_cache=1)](https://coveralls.io/github/vanbukin/Uuids?branch=refs/tags/2.0.0)
 
 [Uuid](./src/Uuids/Uuid.cs) implementation according to the [RFC4122](https://tools.ietf.org/html/rfc4122).
 

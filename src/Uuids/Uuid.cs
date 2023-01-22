@@ -20,6 +20,7 @@ namespace Uuids;
 [JsonConverter(typeof(SystemTextJsonUuidJsonConverter))]
 [SuppressMessage("ReSharper", "RedundantNameQualifier")]
 [SuppressMessage("ReSharper", "RedundantExtendsListEntry")]
+[SuppressMessage("ReSharper", "RedundantDefaultMemberInitializer")]
 public unsafe struct Uuid :
     ISpanFormattable,
     IComparable,
@@ -81,7 +82,7 @@ public unsafe struct Uuid :
     /// <summary>
     ///     A read-only instance of the <see cref="Uuid" /> structure whose value is all zeros.
     /// </summary>
-    public static readonly Uuid Empty;
+    public static readonly Uuid Empty = new();
 #pragma warning restore CA1805
 
     private readonly byte _byte0;
